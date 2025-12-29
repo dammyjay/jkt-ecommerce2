@@ -152,86 +152,6 @@ exports.showBookingForm = async (req, res) => {
 };
 
 
-// exports.downloadQuotation = async (req, res) => {
-//   const bookingId = req.params.id;
-//   const userId = req.session.user.id;
-
-//   const result = await pool.query(
-//     `
-//     SELECT 
-//       q.quotation_html,
-//       p.title
-//     FROM project_quotations q
-//     JOIN project_bookings pb ON pb.id = q.booking_id
-//     JOIN projects p ON p.id = pb.project_id
-//     WHERE pb.id = $1 AND pb.user_id = $2
-//     `,
-//     [bookingId, userId]
-//   );
-
-//   if (result.rows.length === 0) {
-//     return res.status(403).send("Access denied");
-//   }
-
-//   const quotation = result.rows[0];
-
-//   const html = `
-//     <html>
-//       <head>
-//         <style>
-//           body { font-family: Arial; padding: 30px; }
-//         </style>
-//       </head>
-//       <body>
-//         <h2>${quotation.title} – Project Quotation</h2>
-//         ${quotation.quotation_html}
-//       </body>
-//     </html>
-//   `;
-
-//   const file = { content: html };
-//   const pdfBuffer = await html_to_pdf.generatePdf(file, { format: "A4" });
-
-//   res.set({
-//     "Content-Type": "application/pdf",
-//     "Content-Disposition": `attachment; filename="quotation_${bookingId}.pdf"`
-//   });
-
-//   res.send(pdfBuffer);
-// };
-
-
-// exports.downloadQuotation = async (req, res) => {
-//   const bookingId = req.params.id;
-//   const userId = req.session.user.id;
-
-//   const result = await pool.query(
-//     `
-//     SELECT q.quotation_file
-//     FROM project_quotations q
-//     JOIN project_bookings pb ON pb.id = q.booking_id
-//     WHERE pb.id = $1 AND pb.user_id = $2
-//     `,
-//     [bookingId, userId]
-//   );
-
-//   if (result.rows.length === 0) {
-//     return res.status(403).send("Access denied");
-//   }
-
-//   const publicId = result.rows[0].quotation_file;
-
-//   const fileUrl = cloudinary.url(publicId, {
-//     resource_type: "raw",
-//     sign_url: true,
-//   });
-
-//   res.redirect(fileUrl);
-// };
-
-
-// ACCEPT QUOTATION
-
 exports.downloadQuotation = async (req, res) => {
   const bookingId = req.params.id;
   const userId = req.session.user.id;
@@ -341,7 +261,9 @@ exports.downloadQuotation = async (req, res) => {
 
   res.set({
     "Content-Type": "application/pdf",
-    "Content-Disposition": `attachment; filename="quotation_${bookingId}.pdf"`
+    // "Content-Disposition": `attachment; filename="quotation_${bookingId}.pdf"`
+    "Content-Disposition": `attachment; filename="${quotation.title} documentation.pdf"`
+    
   });
 
   res.send(pdfBuffer);
