@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || "JKT E-Commerce" %></title>
+  <link rel="stylesheet" href="/css/style2.css" />
+  <!-- Font Awesome CDN -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  
+/>
+<!-- Add this inside your <head> -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  integrity="sha512-pVnY6RlB1t5KfC7fEfpZKMG7xQjphZd/srP3u6bCJXG5W6O0VJVR4QY5sI5mHl2z3eJq/mQw5m7rY1hg2MZ3RQ=="
+  crossorigin="anonymous"
+  referrerpolicy="no-referrer"
+/>
+
+
+  <!-- SEO Meta -->
+  <meta name="description" content="<%= description || 'JKT E-Commerce online store' %>">
+  <meta name="keywords" content="<%= keywords || 'ecommerce, shop, jkt' %>">
+
+  <!-- Open Graph (Social sharing) -->
+  <meta property="og:title" content="<%= title || 'JKT E-Commerce' %>">
+  <meta property="og:description" content="<%= description || 'JKT E-Commerce online store' %>">
+  <meta property="og:type" content="website">
+
+  <meta property="og:url" content="<%= typeof currentUrl !== 'undefined' ? currentUrl : '' %>">
+<meta property="og:image" content="<%= typeof ogImage !== 'undefined' ? ogImage : '/images/JKT logo bg.png' %>">
+
+
+
+</head>
+<body>
+
+  <!-- Header -->
+  <%- include('partials/header') %>
+
+  <!-- Navbar -->
+ <%- include('partials/navbar', { user: typeof user !== 'undefined' ? user : null }) %>
+
+  <!-- Page Content -->
+  <main>
+    <%- body %>
+  </main>
+
+  <!-- Footer -->
+  <%- include('partials/footer') %>
+
+</body>
+</html>

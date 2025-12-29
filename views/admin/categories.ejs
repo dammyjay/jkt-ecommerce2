@@ -1,0 +1,96 @@
+<div class="container">
+  <h1>Categories</h1>
+
+  <!-- Button to open "Create Category" modal -->
+  <button class="btn btn-primary" onclick="openCategoryModal()">Add New Category</button>
+
+  <!-- Create / Edit Category Modal -->
+  <div id="categoryModal" class="modal">
+    <div class="modal-box">
+      <span class="close" onclick="closeCategoryModal()">&times;</span>
+      <h2 id="modalTitle">Create New Category</h2>
+
+      <!-- Error message -->
+      <% if (typeof error !== 'undefined') { %>
+        <p style="color: red; margin-bottom: 10px;"><%= error %></p>
+      <% } %>
+
+      <form id="categoryForm" action="/admin/categories/create" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="id" id="categoryId">
+        <input type="text" name="name" id="categoryName" placeholder="Category Name" required>
+        <input type="file" name="image" accept="image/*">
+        <button type="submit" class="btn btn-secondary btn-full" id="modalSubmit">Create Category</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Categories Table -->
+   <div class="table-container">
+      <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Image</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% categories.forEach(category => { %>
+          <tr>
+            <td><%= category.name %></td>
+            <td>
+              <% if(category.image_url) { %>
+                <img src="<%= category.image_url %>" width="50" />
+              <% } %>
+            </td data-label="Actions" class="actions">
+            <td>
+              <button class="btn btn-warning btn-sm" onclick="editCategory('<%= category.id %>', '<%= category.name %>')">Edit</button>
+              <form action="/admin/categories/delete/<%= category.id %>" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+   </div>
+  
+</div>
+
+<script>
+function openCategoryModal() {
+  document.getElementById('modalTitle').innerText = "Create New Category";
+  document.getElementById('categoryForm').action = "/admin/categories/create";
+  document.getElementById('categoryId').value = "";
+  document.getElementById('categoryName').value = "";
+  document.getElementById('modalSubmit').innerText = "Create Category";
+  document.getElementById('categoryModal').style.display = 'block';
+}
+
+function closeCategoryModal() {
+  document.getElementById('categoryModal').style.display = 'none';
+}
+
+// Edit category
+function editCategory(id, name) {
+  document.getElementById('modalTitle').innerText = "Edit Category";
+  document.getElementById('categoryForm').action = `/admin/categories/update/${id}`;
+  document.getElementById('categoryId').value = id;
+  document.getElementById('categoryName').value = name;
+  document.getElementById('modalSubmit').innerText = "Update Category";
+  document.getElementById('categoryModal').style.display = 'block';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const modal = document.getElementById('categoryModal');
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+// Auto-open modal if there was an error
+<% if (typeof error !== 'undefined') { %>
+  openCategoryModal();
+<% } %>
+</script>

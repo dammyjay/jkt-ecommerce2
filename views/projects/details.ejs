@@ -1,0 +1,47 @@
+<div class="container">
+  
+  <h1><%= project.title %></h1>
+
+  <p><%- project.full_description %></p>
+
+  <h3>Gallery</h3>
+  <div class="gallery">
+    <% images.forEach(img => { %>
+      <div class="gallery-item">
+        <img src="<%= img.image_url %>" />
+      </div>
+      
+    <% }) %>
+  </div>
+
+  <h3>Demo Videos</h3>
+
+  <div class="videos">
+    <% videos.forEach(v => { %>
+      <div class="video-item">
+        <% if(v.video_type === 'youtube'){ 
+            // Convert normal YouTube URL to embed URL
+            const embedUrl = v.video_url.includes("watch?v=") ? v.video_url.replace("watch?v=", "embed/") : v.video_url;
+        %>
+          <iframe width="300" height="170" src="<%= embedUrl %>" frameborder="0" allowfullscreen></iframe>
+        <% } else { %>
+          <video width="300" height="170" controls>
+            <source src="<%= v.video_url %>" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+
+
+  <a href="/projects/<%= project.id %>/book" class="btn">Book This Project</a>
+
+  <!-- <form action="/projects/<%= project.id %>/book" method="POST">
+  <button type="submit" class="btn">
+    📌 Book This Project
+  </button>
+</form> -->
+
+
+</div>

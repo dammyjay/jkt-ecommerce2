@@ -1,0 +1,73 @@
+<!-- <footer class="footer">
+  <div class="container">
+    <p>&copy; <%= new Date().getFullYear() %> JKT E-Commerce. All rights reserved.</p>
+  </div>
+</footer> -->
+
+  <!-- ======================= FOOTER ======================= -->
+  <!-- <footer class="footer" style="margin-top:auto; padding:var(--s-lg); text-align:center;">
+    <p>&copy; <%= new Date().getFullYear() %> JKT E-Commerce. All Rights Reserved.</p>
+    <div style="margin-top: var(--s-sm); display:flex; justify-content:center; gap:var(--s-xs);">
+      <a href="#"><i class="fab fa-facebook"></i></a>
+      <a href="#"><i class="fab fa-twitter"></i></a>
+      <a href="#"><i class="fab fa-instagram"></i></a>
+      <a href="#"><i class="fab fa-linkedin"></i></a>
+    </div>
+  </footer> -->
+
+  <!-- ======================= FOOTER ======================= -->
+<footer class="footer">
+  <div class="footer-container container">
+
+    <!-- Newsletter -->
+    <div class="footer-newsletter">
+      <h3>Join Our Newsletter</h3>
+      <p>Get exclusive deals and updates directly in your inbox.</p>
+      <form action="/subscribe" method="POST" class="newsletter-form">
+        <input type="email" name="email" placeholder="Enter your email" required>
+        <button class="btn btn-secondary" type="submit">Subscribe</button>
+      </form>
+    </div>
+
+    <!-- Footer Links -->
+    <div class="footer-links">
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/about">About Us</a></li>
+          <li><a href="/contact">Contact Us</a></li>
+          <li><a href="/careers">Careers</a></li>
+          <li><a href="/blog">Blog</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="/products?featured=true">Featured Products</a></li>
+          <li><a href="/products?new=true">New Arrivals</a></li>
+          <li><a href="/promotions">Hot Deals</a></li>
+          <li><a href="/categories">Categories</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="/faq">FAQ</a></li>
+          <li><a href="/shipping">Shipping Info</a></li>
+          <li><a href="/returns">Returns & Exchanges</a></li>
+          <li><a href="/privacy">Privacy Policy</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Social Media -->
+    <div class="footer-social">
+      <a href="#"><i class="fab fa-facebook-f"></i></a>
+      <a href="#"><i class="fab fa-twitter"></i></a>
+      <a href="#"><i class="fab fa-instagram"></i></a>
+      <a href="#"><i class="fab fa-linkedin-in"></i></a>
+    </div>
+
+    <p class="footer-copy">&copy; <%= new Date().getFullYear() %> JKT E-Commerce. All Rights Reserved.</p>
+  </div>
+</footer>

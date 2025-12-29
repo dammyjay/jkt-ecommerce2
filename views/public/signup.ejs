@@ -1,0 +1,392 @@
+<section class="auth-section">
+  <!-- <div class="auth-container">
+    <div class="auth-box">
+      <h2>Create Account</h2>
+
+      <form
+        id="signupForm"
+        action="/auth/signup"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        <div class="input-group">
+          <input type="text" name="fullname" placeholder="Full Name" required />
+        </div>
+
+        <div class="input-group">
+          <input
+            type="email"
+            name="email"
+            id="emailField"
+            placeholder="Email"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="profileImage">Upload Profile Image</label>
+          <input type="file" name="profileImage" accept="image/*" />
+        </div>
+
+        <button type="submit" class="btn">Sign Up</button>
+      </form>
+
+      <div class="social-login">
+        <p>Or continue with</p>
+        <div class="social-buttons">
+          <a href="/auth/google" class="google-btn">Google</a>
+          <a href="/auth/facebook" class="facebook-btn">Facebook</a>
+          <a href="/auth/linkedin" class="linkedin-btn">LinkedIn</a>
+        </div>
+      </div>
+
+      <p class="note">
+        Already have an account? <a href="/auth/login">Login</a>
+      </p>
+    </div>
+  </div> -->
+
+   <div class="form-page">
+    <div class="card form-card">
+      <h2>Create Account</h2>
+
+      <form
+        id="signupForm"
+        action="/auth/signup"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        <label>Full Name</label>
+        <input
+          type="text"
+          name="fullname"
+          class="input"
+          placeholder="Full Name"
+          required
+        />
+
+        <label>Email</label>
+        <input
+          type="email"
+          name="email"
+          id="emailField"
+          class="input"
+          placeholder="Email"
+          required
+        />
+
+        <!-- <label>Password</label>
+        <input
+          type="password"
+          name="password"
+          class="input"
+          placeholder="Password"
+          required
+        /> -->
+
+        <label>Password</label>
+        <div class="password-wrapper">
+          <input
+            type="password"
+            name="password"
+            id="password"
+            class="input"
+            placeholder="Password"
+            required
+          />
+          <i class="fa fa-eye toggle-password" onclick="togglePassword('password', this)"></i>
+        </div>
+
+        <label>Confirm Password</label>
+        <div class="password-wrapper">
+          <input
+            type="password"
+            name="confirmPassword"
+            id="confirmPassword"
+            class="input"
+            placeholder="Confirm Password"
+            required
+            onblur="checkPasswordMatch()"
+          />
+          <i class="fa fa-eye toggle-password" onclick="togglePassword('confirmPassword', this)"></i>
+        </div>
+
+        <p id="passwordError" style="color:#dc2626; font-size:0.85rem;"></p>
+
+
+
+        <label>Profile Image</label>
+        <input
+          type="file"
+          name="profileImage"
+          class="input"
+          accept="image/*"
+        />
+
+        <button type="submit" class="btn btn-primary btn-full">
+          Sign Up
+        </button>
+      </form>
+
+      <hr style="margin: 20px 0;" />
+
+      <p style="text-align: center;">Or continue with</p>
+
+      <div style="display: grid; gap: 10px;">
+        <a href="/auth/google" class="btn btn-secondary btn-full" style="background-color: red;">Google</a>
+        <!-- <a href="/auth/facebook" class="btn btn-secondary btn-full" style="background-color: rgb(0, 4, 255);">Facebook</a>
+        <a href="/auth/linkedin" class="btn btn-secondary btn-full" style="background-color: #0077b5;">LinkedIn</a> -->
+      </div>
+
+      <p style="margin-top: 15px; text-align: center;">
+        Already have an account?
+        <a href="/auth/login">Login</a>
+      </p>
+    </div>
+  </div>
+
+
+  <!-- OTP Modal -->
+  <!-- <div id="otpModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span id="closeModal">&times;</span>
+      <h3>Email Verification</h3>
+      <p>We’ve sent an OTP to your email. Please verify below.</p>
+
+      <form id="otpForm" action="/auth/verifyOtp" method="POST">
+        <input type="email" name="email" id="otpEmail" readonly /> <br />
+        <input
+          type="text"
+          name="otp"
+          placeholder="Enter OTP"
+          maxlength="6"
+          required
+        />
+        <button type="submit" class="btn">Verify</button>
+      </form>
+
+      <p id="otpMessage"></p>
+    </div>
+  </div> -->
+
+  <div id="otpModal" class="modal">
+  <div class="modal-box center small">
+    <h3>Email Verification</h3>
+    <p>We’ve sent an OTP to your email. Please verify below.</p>
+
+    <form id="otpForm">
+      <input
+        type="email"
+        name="email"
+        id="otpEmail"
+        class="input"
+        readonly
+      />
+
+      <input
+        type="text"
+        name="otp"
+        class="input"
+        placeholder="Enter OTP"
+        maxlength="6"
+        required
+      />
+
+      <button type="submit" class="btn btn-primary btn-full">
+        Verify
+      </button>
+    </form>
+
+    <button
+      class="btn btn-secondary btn-full"
+      style="margin-top: 10px;"
+      id="closeModal"
+    >
+      Cancel
+    </button>
+
+    <p id="otpMessage"></p>
+  </div>
+</div>
+
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="loader-container">
+    <!-- Custom loading image -->
+    <img src="/images/JKT logo.png" alt="Loading..." class="loader-img" />
+    <p>Signing you up...</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Script for form submission and otp modal -->
+<script>
+  const signupForm = document.getElementById("signupForm");
+  const otpForm = document.getElementById("otpForm");
+  const otpModal = document.getElementById("otpModal");
+  const otpEmail = document.getElementById("otpEmail");
+  const emailField = document.getElementById("emailField");
+  const loadingOverlay = document.getElementById("loadingOverlay");
+
+  // 🟢 Signup form submit
+  signupForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+      const errorEl = document.getElementById("passwordError");
+
+      if (password !== confirmPassword) {
+        errorEl.textContent = "Passwords do not match";
+        return;
+      }
+
+      errorEl.textContent = "Passwords match";
+      errorEl.style.color = "green";
+
+    // Show loading icon
+    loadingOverlay.querySelector("p").textContent = "Signing you up...";
+    loadingOverlay.style.display = "flex";
+
+    try {
+      const formData = new FormData(signupForm);
+      const res = await fetch("/auth/signup", {
+        method: "POST",
+        body: formData,
+      });
+
+      // Hide loader once response is received
+      loadingOverlay.style.display = "none";
+
+      if (res.ok) {
+        // otpModal.style.display = "flex";
+        otpModal.classList.add("active");
+        otpEmail.value = emailField.value;
+      } else {
+        const errorText = await res.text();
+        Swal.fire({
+          icon: "error",
+          title: "Signup Failed",
+          text: errorText || "Something went wrong. Please try again.",
+        });
+      }
+    } catch (err) {
+      loadingOverlay.style.display = "none";
+      Swal.fire({
+        icon: "error",
+        title: "Network Error",
+        text: "Unable to connect to the server. Please check your internet.",
+      });
+    }
+  });
+
+  // 🟢 OTP form submit
+  otpForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Show loading overlay while verifying OTP
+    loadingOverlay.querySelector("p").textContent = "Verifying OTP...";
+    loadingOverlay.style.display = "flex";
+
+    const email = otpEmail.value;
+    const otp = e.target.otp.value;
+
+    try {
+      const res = await fetch("/auth/verifyOtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await res.json();
+
+      // Hide loading overlay
+      loadingOverlay.style.display = "none";
+
+      if (data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Email Verified!",
+          text: "You can now log in to your account.",
+          showConfirmButton: false,
+          timer: 2000,
+        });
+        setTimeout(() => (window.location.href = "/auth/login"), 2000);
+      } else {
+        const msgEl = document.getElementById("otpMessage");
+        msgEl.style.color = "#dc2626";
+        msgEl.textContent = data.message;
+      }
+    } catch (error) {
+      loadingOverlay.style.display = "none";
+      Swal.fire({
+        icon: "error",
+        title: "Verification Failed",
+        text: "Something went wrong. Please try again.",
+      });
+    }
+  });
+
+  // 🟢 Close OTP modal
+  document.getElementById("closeModal").onclick = () => {
+    // otpModal.style.display = "none";
+    otpModal.classList.remove("active");
+  };
+
+  function togglePassword(inputId, icon) {
+  const input = document.getElementById(inputId);
+
+  if (input.type === "password") {
+    input.type = "text";
+    icon.classList.remove("fa-eye");
+    icon.classList.add("fa-eye-slash");
+  } else {
+    input.type = "password";
+    icon.classList.remove("fa-eye-slash");
+    icon.classList.add("fa-eye");
+  }
+}
+
+function checkPasswordMatch() {
+  const password = document.getElementById("password").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
+  const errorEl = document.getElementById("passwordError");
+
+  // Do nothing if confirm password is empty
+  if (!confirmPassword) {
+    errorEl.textContent = "";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    errorEl.textContent = "Passwords do not match";
+  } else {
+      errorEl.textContent = "Passwords match";
+      errorEl.style.color = "green";
+  }
+}
+
+
+
+  // 🟢 Close modal when clicking outside it
+  window.onclick = (e) => {
+    if (e.target === otpModal) {
+      // otpModal.style.display = "none";
+      otpModal.classList.remove("active");
+    }
+  };
+</script>
+
+
+</section>

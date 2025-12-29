@@ -1,0 +1,467 @@
+
+
+<div class="container">
+  <div class="card">
+    <div class="page-header" style="display:flex; gap:12px; justify-content:space-between; align-items:center;">
+      <h1>🧑‍💼 Manage Products</h1>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" onclick="openCreateModal()">➕ Upload Product</button>
+        <button class="btn btn-secondary" onclick="openCategoryModal()">➕ Add Category</button>
+      </div>
+    </div>
+
+    <!-- 🧩 Create Product Modal -->
+    <div id="createModal" class="modal">
+      <div class="modal-box">
+        <span class="close" onclick="closeCreateModal()">&times;</span>
+        <h2>Upload New Product</h2>
+
+        <form 
+          action="/products/admin/create" 
+          method="POST" 
+          enctype="multipart/form-data"
+        >
+          <label>Product Name</label>
+          <input type="text" name="name" required>
+
+          <label>Product Image</label>
+          <input type="file" name="image" accept="image/*" onchange="previewCreateImage(event)">
+          <img id="createPreview" class="image-preview">
+
+          <label>Description</label>
+          <textarea name="description" id="createDescription"></textarea>
+
+          <label>Category</label>
+          <select name="category_id" required>
+            <option value="">Select Category</option>
+            <% categories.forEach(category => { %>
+              <option value="<%= category.id %>">
+                <%= category.name %>
+              </option>
+            <% }) %>
+          </select>
+
+
+          <label>Price (₦)</label>
+          <input type="number" step="0.01" name="price" required>
+
+          <label>Stock</label>
+          <input type="number" name="stock" required>
+
+          <button type="submit" class="btn btn-primary btn-full">Upload Product</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="categoryModal" class="modal">
+      <div class="modal-box">
+        <span class="close" onclick="closeCategoryModal()">&times;</span>
+        <h2>Upload New Product</h2>
+        <form 
+          action="/admin/categories/create" 
+          method="POST"
+        >
+          <input 
+            type="text" 
+            name="name" 
+            placeholder="New Category Name" 
+            required
+          >
+
+          <input type="file" name="image" accept="image/*" required>
+          <button type="submit" class="btn btn-primary btn-full">
+            Create Category
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="table-filters">
+      <input
+        type="text"
+        id="tableSearch"
+        placeholder="🔍 Search products..."
+      />
+
+      <select id="categoryFilter">
+        <option value="">All Categories</option>
+        <% categories.forEach(cat => { %>
+          <option value="<%= cat.name.toLowerCase() %>">
+            <%= cat.name %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+
+    <!-- ✅ Product Table -->
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          
+          <tr>
+
+            <th onclick="sortTable(0)">ID ⬍</th>
+            <th>Image</th>
+            <th onclick="sortTable(2)">Name ⬍</th>
+            <th onclick="sortTable(3)">Category ⬍</th>
+            <th onclick="sortTable(4)">Price ⬍</th>
+            <th onclick="sortTable(5)">Stock ⬍</th>
+            <th>Actions</th>
+
+          </tr>
+        </thead>
+        <tbody>
+          <% products.forEach(product => { %>
+            <tr
+              data-name="<%= product.name.toLowerCase() %>"
+              data-category="<%= (product.category_name || 'uncategorized').toLowerCase() %>"
+              data-price="<%= product.price %>"
+              data-stock="<%= product.stock %>"
+            >
+              <td><%= product.id %></td>
+
+              <td>
+                <% if (product.image_url) { %>
+                  <img
+                    src="<%= product.image_url %>"
+                    alt="<%= product.name %>"
+                    width="50"
+                    height="50"
+                    style="object-fit: cover; border-radius: 5px;"
+                  >
+                <% } else { %>
+                  N/A
+                <% } %>
+              </td>
+
+              <td><%= product.name %></td>
+              <td><%= product.category_name || 'Uncategorized' %></td>
+              <td>₦<%= product.price %></td>
+              <td><%= product.stock %></td>
+
+              <td>
+                <button class="icon-btn" onclick='openViewModal(<%- JSON.stringify(product) %>)'>👁️</button>
+                <button class="icon-btn" onclick='openEditModal(<%- JSON.stringify(product) %>)'>✏️</button>
+                <!-- <button class="icon-btn" onclick="openDeleteModal('<%= product.id %>', '<%= product.name %>')">🗑️</button> -->
+                <button class="icon-btn" onclick="openDeleteModal('<%= product.id %>', '<%= product.name %>')">🗑️</button>
+
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- 👁️ View Product Modal -->
+<div id="viewModal" class="modal">
+  <div class="modal-box">
+    <span class="close" onclick="closeViewModal()">&times;</span>
+    <h2>Product Details</h2>
+    <div id="viewContent">
+      <p><strong>Name:</strong> <span id="viewName"></span></p>
+      <p><strong>Category:</strong> <span id="viewCategory"></span></p>
+      <p><strong>Price:</strong> ₦<span id="viewPrice"></span></p>
+      <p><strong>Stock:</strong> <span id="viewStock"></span></p>
+      <p><strong>Description:</strong></p>
+      <p id="viewDescription"></p>
+      <img id="viewImage" style="width:100%; max-width:300px; margin-top:10px;">
+    </div>
+  </div>
+</div>
+
+
+<!-- 🧩 Edit Product Modal -->
+<div id="editModal" class="modal">
+  <div class="modal-box">
+    <span class="close" onclick="closeEditModal()">&times;</span>
+    <h2>Edit Product</h2>
+
+    <form 
+      id="editForm" 
+      method="POST" 
+      enctype="multipart/form-data"
+      class="modal-form"
+    >
+      <label>Product Name</label>
+      <input type="text" name="name" id="editName" required>
+
+      <label>Change Image</label>
+      <input type="file" name="image" accept="image/*" onchange="previewEditImage(event)">
+      <img id="editPreview" class="image-preview">
+
+      <label>Description</label>
+      <textarea name="description" id="editDescription"></textarea>
+
+      <select name="category_id" id="editCategory">
+        <% categories.forEach(cat => { %>
+          <option value="<%= cat.id %>"><%= cat.name %></option>
+        <% }) %>
+      </select>
+
+
+      <label>Price (₦)</label>
+      <input type="number" step="0.01" name="price" id="editPrice" required>
+
+      <label>Stock</label>
+      <input type="number" name="stock" id="editStock" required>
+
+      <button type="submit" class="btn btn-primary btn-full">Update Product</button>
+    </form>
+  </div>
+</div>
+
+  <!-- ❌ Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-box center small">
+      <span class="close" onclick="closeDeleteModal()">&times;</span>
+
+      <h3>Delete Product</h3>
+      <p>
+        Are you sure you want to delete  
+        <strong id="deleteProductName"></strong>?
+      </p>
+
+      <form id="deleteForm" method="POST">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-danger">
+          Yes, Delete
+        </button>
+      </form>
+    </div>
+  </div>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+
+<!-- Script for CKEditor -->
+ <script>
+let createEditor;
+let editEditor;
+
+// Create product editor
+ClassicEditor
+  .create(document.querySelector('#createDescription'), {
+    placeholder: 'Write product description...',
+    toolbar: [
+      'heading', '|',
+      'bold', 'italic', 'link',
+      'bulletedList', 'numberedList',
+      'blockQuote', '|',
+      'undo', 'redo'
+    ]
+  })
+  .then(editor => {
+    createEditor = editor;
+  })
+  .catch(error => console.error(error));
+
+// Edit product editor
+ClassicEditor
+  .create(document.querySelector('#editDescription'), {
+    placeholder: 'Edit product description...',
+    toolbar: [
+      'heading', '|',
+      'bold', 'italic', 'link',
+      'bulletedList', 'numberedList',
+      'blockQuote', '|',
+      'undo', 'redo'
+    ]
+  })
+  .then(editor => {
+    editEditor = editor;
+  })
+  .catch(error => console.error(error));
+</script>
+
+<script>
+/* CREATE PRODUCT FORM */
+document.querySelector('#createModal form').addEventListener('submit', function () {
+  if (createEditor) {
+    document.getElementById('createDescription').value = createEditor.getData();
+  }
+});
+
+/* EDIT PRODUCT FORM */
+document.getElementById('editForm').addEventListener('submit', function () {
+  if (editEditor) {
+    document.getElementById('editDescription').value = editEditor.getData();
+  }
+});
+</script>
+
+
+<!-- Script for modals create and edit and delete -->
+<script>
+  const createModal = document.getElementById("createModal");
+  const editModal = document.getElementById("editModal");
+
+  function openCreateModal() {
+    // createModal.style.display = "flex";
+    createModal.classList.add("active");
+  }
+
+  function closeCreateModal() {
+    // createModal.style.display = "none";
+    createModal.classList.remove("active");
+  }
+
+  function openCategoryModal() {
+    // categoryModal.style.display = "flex";
+    categoryModal.classList.add("active");
+  }
+
+  function closeCategoryModal() {
+    // categoryModal.style.display = "none";
+    categoryModal.classList.remove("active");
+  }
+
+  function openEditModal(product) {
+  document.getElementById('editForm').action =
+    `/products/admin/${product.id}/update`;
+
+  document.getElementById('editName').value = product.name;
+  // document.getElementById('editDescription').value = product.description || '';
+  document.getElementById('editPrice').value = product.price;
+  document.getElementById('editStock').value = product.stock;
+  document.getElementById('editCategory').value = product.category_id || '';
+
+  if (product.image_url) {
+    document.getElementById('editPreview').src = product.image_url;
+  }
+
+   // ✅ Set CKEditor content
+    if (editEditor) {
+      editEditor.setData(product.description || '');
+    }
+
+  document.getElementById('editModal').style.display = 'block';
+}
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+  }
+
+  function previewCreateImage(event) {
+    document.getElementById("createPreview").src =
+      URL.createObjectURL(event.target.files[0]);
+  }
+
+  function previewEditImage(event) {
+    document.getElementById("editPreview").src =
+      URL.createObjectURL(event.target.files[0]);
+  }
+
+  const deleteModal = document.getElementById("deleteModal");
+
+  function openDeleteModal(id, name) {
+    // deleteModal.style.display = "flex";
+    deleteModal.classList.add("active");
+    document.getElementById("deleteProductName").textContent = name;
+    document.getElementById("deleteForm").action =
+      `/products/admin/${id}/delete`;
+  }
+
+  function closeDeleteModal() {
+    // deleteModal.style.display = "none";
+    deleteModal.classList.remove("active");
+  }
+
+  // View modal
+  function openViewModal(product) {
+    document.getElementById('viewName').innerText = product.name;
+    document.getElementById('viewCategory').innerText = product.category_name || 'Uncategorized';
+    document.getElementById('viewPrice').innerText = product.price;
+    document.getElementById('viewStock').innerText = product.stock;
+    document.getElementById('viewDescription').innerHTML = product.description || 'N/A';
+    if(product.image_url) {
+      document.getElementById('viewImage').src = product.image_url;
+      document.getElementById('viewImage').style.display = 'block';
+    } else {
+      document.getElementById('viewImage').style.display = 'none';
+    }
+    document.getElementById('viewModal').style.display = 'block';
+  }
+  function closeViewModal() {
+    document.getElementById('viewModal').style.display = 'none';
+  }
+
+  window.onclick = function (event) {
+    if (event.target === createModal) closeCreateModal();
+    if (event.target === editModal) closeEditModal();
+    if (event.target === categoryModal) closeCategoryModal(); 
+    if (event.target === deleteModal) {
+      closeDeleteModal();
+    }
+    if (event.target.id === "viewModal") closeViewModal();
+  };
+</script>
+
+<!-- Script for filtering -->
+
+<script>
+const searchInput = document.getElementById('tableSearch');
+const categorySelect = document.getElementById('categoryFilter');
+const rows = document.querySelectorAll('.table tbody tr');
+
+function filterTable() {
+  const searchValue = searchInput.value.toLowerCase();
+  const categoryValue = categorySelect.value;
+
+  rows.forEach(row => {
+    const name = row.dataset.name;
+    const category = row.dataset.category;
+    const price = row.dataset.price;
+    const stock = row.dataset.stock;
+
+    const matchesSearch =
+      name.includes(searchValue) ||
+      category.includes(searchValue) ||
+      price.includes(searchValue) ||
+      stock.includes(searchValue);
+
+    const matchesCategory =
+      categoryValue === "" || category === categoryValue;
+
+    row.style.display = matchesSearch && matchesCategory ? "" : "none";
+  });
+}
+
+searchInput.addEventListener('input', filterTable);
+categorySelect.addEventListener('change', filterTable);
+</script>
+
+<!-- Script for sorting -->
+ <script>
+let sortDirection = true;
+
+function sortTable(colIndex) {
+  const tbody = document.querySelector('.table tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  rows.sort((a, b) => {
+    let A = a.children[colIndex].innerText.trim();
+    let B = b.children[colIndex].innerText.trim();
+
+    let numA = parseFloat(A.replace(/[₦,]/g, ''));
+    let numB = parseFloat(B.replace(/[₦,]/g, ''));
+
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return sortDirection ? numA - numB : numB - numA;
+    }
+
+    return sortDirection
+      ? A.localeCompare(B)
+      : B.localeCompare(A);
+  });
+
+  sortDirection = !sortDirection;
+  rows.forEach(row => tbody.appendChild(row));
+}
+</script>

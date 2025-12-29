@@ -1,0 +1,174 @@
+<!-- <div class="product-detail-container">
+  <div class="product-images">
+    <img id="mainImage" src="<%= product.image_url %>" alt="<%= product.name %>">
+  </div>
+
+  <div class="product-info">
+    <h1><%= product.name %></h1>
+    <p class="category">Category: <%= product.category_name %></p>
+    <p class="price">₦<%= product.price.toLocaleString() %></p>
+    <p class="description"><%- product.description %></p>
+
+
+    <form id="addToCartForm" method="POST" action="/cart/add/<%= product.id %>">
+      <label for="quantity">Quantity:</label>
+      <input type="number" name="quantity" id="quantity" value="1" min="1">
+      <button type="submit" class="btn-add-cart">Add to Cart</button>
+    </form>
+  </div>
+</div>
+
+
+<div id="cartNotification" class="modal-notification" style="display:none;">
+  <div class="modal-content">
+    <p id="cartMessage"></p>
+    <div class="modal-actions">
+      <button onclick="closeCartNotification()" class="btn-close">Continue Shopping</button>
+      <a href="/cart" class="btn-view-cart">View Cart</a>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const addToCartForm = document.getElementById("addToCartForm");
+const notification = document.getElementById("cartNotification");
+const cartMessage = document.getElementById("cartMessage");
+
+function closeCartNotification() {
+  notification.style.display = "none";
+}
+
+addToCartForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const formData = new FormData(addToCartForm);
+  const quantity = formData.get("quantity");
+
+  const res = await fetch(addToCartForm.action, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ quantity })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    cartMessage.textContent = data.message;
+    notification.style.display = "flex";
+
+    setTimeout(() => {
+      notification.style.display = "none";
+    }, 3000);
+  }
+});
+</script> -->
+
+<div class="container product-detail-container">
+
+  <div class="product-detail card">
+
+    <!-- Product Image -->
+    <div class="product-images">
+      <img
+        id="mainImage"
+        src="<%= product.image_url %>"
+        alt="<%= product.name %>"
+      >
+    </div>
+
+    <!-- Product Info -->
+    <div class="product-info">
+      <h1><%= product.name %></h1>
+
+      <p class="muted">
+        Category: <strong><%= product.category_name %></strong>
+      </p>
+
+      <h3>₦<%= product.price.toLocaleString() %></h3>
+
+      <p class="description">
+        <%- product.description %>
+      </p>
+
+      <!-- Add to Cart -->
+      <form
+        id="addToCartForm"
+        method="POST"
+        action="/cart/add/<%= product.id %>"
+      >
+        <label for="quantity">Quantity</label>
+
+        <input
+          type="number"
+          name="quantity"
+          id="quantity"
+          value="1"
+          min="1"
+        >
+
+        <button type="submit" class="btn btn-primary btn-full">
+          Add to Cart
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+
+<div id="cartNotification" class="modal">
+  <div class="modal-box center small">
+
+    <p id="cartMessage"></p>
+
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        onclick="closeCartNotification()"
+      >
+        Continue Shopping
+      </button>
+
+      <a href="/cart" class="btn btn-primary">
+        View Cart
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const addToCartForm = document.getElementById("addToCartForm");
+const notification = document.getElementById("cartNotification");
+const cartMessage = document.getElementById("cartMessage");
+
+function closeCartNotification() {
+  notification.classList.remove("active");
+}
+
+addToCartForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(addToCartForm);
+  const quantity = formData.get("quantity");
+
+  const res = await fetch(addToCartForm.action, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ quantity })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    cartMessage.textContent = data.message;
+    notification.classList.add("active");
+
+    setTimeout(() => {
+      notification.classList.remove("active");
+    }, 3000);
+  }
+});
+</script>
+

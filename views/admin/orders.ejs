@@ -1,0 +1,29 @@
+
+
+<div class="admin-container">
+  <h2>All Orders</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Customer</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% orders.forEach(order => { %>
+        <tr>
+          <td><%= order.id %></td>
+          <td><%= order.customer_name %></td>
+          <td>₦<%= order.total_amount %></td>
+          <td><%= order.status %></td>
+          <td><%= new Date(order.created_at).toLocaleDateString() %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+

@@ -1,0 +1,152 @@
+
+<nav class="navbar">
+  <div class="container">
+    <!-- Logo -->
+    <a href="/" class="logo">
+      <img src="/images/JKT logo bg.png" alt="Logo" class="nav-logo">
+    </a>
+
+    <!-- Hamburger -->
+    <button class="menu-toggle" id="menu-toggle">
+      <i class="fa fa-bars"></i>
+    </button>
+
+    <!-- Links -->
+    <div class="nav-links" id="nav-links">
+
+      <% if (user && user.role === 'admin') { %>
+
+        <a href="/admin/dashboard">Dashboard</a>
+
+        <!-- Store Dropdown -->
+        <div class="dropdown">
+          <button class="dropbtn">
+            Store <i class="fa fa-caret-down"></i>
+          </button>
+          <div class="dropdown-content">
+            <a href="/admin/products">Products</a>
+            <a href="/admin/categories">Categories</a>
+            <a href="/admin/promotions">Promotions</a>
+            <a href="/admin/orders">Orders</a>
+          </div>
+        </div>
+
+        <!-- Projects Dropdown -->
+        <div class="dropdown">
+          <button class="dropbtn">
+            Projects <i class="fa fa-caret-down"></i>
+          </button>
+          <div class="dropdown-content">
+            <a href="/admin/projects">All Projects</a>
+            <a href="/admin/projects/bookings">Project Bookings</a>
+          </div>
+        </div>
+
+        <!-- Users -->
+        <a href="/admin/users">Users</a>
+
+        <!-- Account -->
+        <div class="dropdown">
+          <button class="dropbtn">
+            Account <i class="fa fa-caret-down"></i>
+          </button>
+          <div class="dropdown-content">
+            <a href="/admin/profile">Profile</a>
+            <a href="/auth/logout" class="logout-btn">Logout</a>
+          </div>
+        </div>
+
+      <% } else if (user) { %>
+
+        <a href="/">Home</a>
+
+        <!-- Shop -->
+        <div class="dropdown">
+          <button class="dropbtn">
+            Shop <i class="fa fa-caret-down"></i>
+          </button>
+          <div class="dropdown-content">
+            <a href="/products">Products</a>
+            <a href="/cart">Cart (<%= cartQty %>)</a>
+          </div>
+        </div>
+
+        <!-- Projects -->
+        
+        <div class="dropdown">
+          <button class="dropbtn">
+            Project <i class="fa fa-caret-down"></i>
+          </button>
+          <div class="dropdown-content">
+            <a href="/projects">Projects List</a>
+            <a href="/projects/dashboard/userProjects">My Bookings</a>
+          </div>
+        </div>
+
+
+        <!-- Account -->
+        <div class="dropdown nav-profile">
+          <button class="dropbtn profile-btn">
+            <% if (user.profile_image) { %>
+              <img src="<%= user.profile_image %>" class="profile-icon">
+            <% } else { %>
+              <i class="fa fa-user-circle"></i>
+            <% } %>
+            <i class="fa fa-caret-down"></i>
+          </button>
+          <div class="dropdown-content right">
+            <a href="/orders">My Orders</a>
+            <a href="/dashboard/projects">My Projects</a>
+            <a href="/users/profile">Profile</a>
+            <a href="/auth/logout" class="logout-btn">Logout</a>
+          </div>
+        </div>
+
+      <% } else { %>
+
+        <a href="/">Home</a>
+        <a href="/products">Shop</a>
+        <a href="/projects">Projects</a>
+        <a href="/auth/login">Login</a>
+        <a href="/auth/signup">Signup</a>
+
+      <% } %>
+
+    </div>
+  </div>
+</nav>
+
+
+
+<!-- 
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toggleBtn = document.getElementById("menu-toggle");
+    const navLinks = document.getElementById("nav-links");
+
+    toggleBtn.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+    });
+  });
+</script> -->
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toggleBtn = document.getElementById("menu-toggle");
+    const navLinks = document.getElementById("nav-links");
+    const dropdowns = document.querySelectorAll(".dropdown");
+
+    toggleBtn.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+    });
+
+    dropdowns.forEach(dropdown => {
+      dropdown.querySelector(".dropbtn").addEventListener("click", (e) => {
+        e.preventDefault();
+        dropdown.classList.toggle("active");
+      });
+    });
+  });
+</script>
+

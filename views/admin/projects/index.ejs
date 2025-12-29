@@ -1,0 +1,255 @@
+<div class="container">
+  <div class="card">
+    <div class="page-header" style="display:flex; gap:12px; justify-content:space-between; align-items:center;">
+      <h1>🧑‍💼 Manage Projects</h1>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" onclick="openCreateModal()">➕ Upload Project</button>
+      </div>
+    </div>
+
+    <!-- 🧩 Create Project Modal -->
+    <div id="createModal" class="modal">
+      <div class="modal-box">
+        <span class="close" onclick="closeCreateModal()">&times;</span>
+        <h2>Upload New Project</h2>
+
+        <form 
+          action="/admin/projects/create" 
+          method="POST" 
+          enctype="multipart/form-data"
+        >
+          <label>Project Title</label>
+          <input type="text" name="title" required>
+
+          <label>Short Description</label>
+          <textarea name="short_description" id="createShortDesc"></textarea>
+
+          <label>Full Description</label>
+          <textarea name="full_description" id="createFullDesc"></textarea>
+
+          <label>Category</label>
+          <input type="text" name="category" required>
+
+          <label>Complexity Level</label>
+          <select name="complexity_level" required>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+
+          <label>Estimated Price</label>
+          <input type="number" step="0.01" name="estimated_price" required>
+
+          <label>Price Type</label>
+          <select name="price_type">
+            <option value="quote">Quote</option>
+            <option value="fixed">Fixed</option>
+          </select>
+
+          <label>Thumbnail Image</label>
+          <input type="file" name="thumbnail_image" accept="image/*" onchange="previewCreateImage(event)">
+          <img id="createPreview" class="image-preview">
+
+          <button type="submit" class="btn btn-primary btn-full">Upload Project</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ✅ Projects Table -->
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID ⬍</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% projects.forEach(project => { %>
+          <tr>
+            <td><%= project.id %></td>
+            <td><%= project.title %></td>
+            <td><%= project.is_active ? 'Active' : 'Inactive' %></td>
+            <td>
+              <button class="icon-btn" onclick='openEditModal(<%- JSON.stringify(project) %>)'>✏️</button>
+              <button class="icon-btn" onclick="openDeleteModal('<%= project.id %>', '<%= project.title %>')">🗑️</button>
+              <!-- <a href="/admin/projects/<%= project.id %>" class="btn btn-secondary">👁️ View</a> -->
+              <button 
+                class="icon-btn" 
+                onclick="window.location.href='/admin/projects/<%= project.id %>'"
+              >
+                👁️
+              </button>
+
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 🧩 Edit Project Modal -->
+<div id="editModal" class="modal">
+  <div class="modal-box">
+    <span class="close" onclick="closeEditModal()">&times;</span>
+    <h2>Edit Project</h2>
+
+    <form id="editForm" method="POST" enctype="multipart/form-data">
+      <label>Project Title</label>
+      <input type="text" name="title" id="editTitle" required>
+
+      <label>Short Description</label>
+      <textarea name="short_description" id="editShortDesc"></textarea>
+
+      <label>Full Description</label>
+      <textarea name="full_description" id="editFullDesc"></textarea>
+
+      <label>Category</label>
+      <input type="text" name="category" id="editCategory" required>
+
+      <label>Complexity Level</label>
+      <select name="complexity_level" id="editComplexity">
+        <option value="Beginner">Beginner</option>
+        <option value="Intermediate">Intermediate</option>
+        <option value="Advanced">Advanced</option>
+      </select>
+
+      <label>Estimated Price</label>
+      <input type="number" step="0.01" name="estimated_price" id="editPrice" required>
+
+      <label>Price Type</label>
+      <select name="price_type" id="editPriceType">
+        <option value="quote">Quote</option>
+        <option value="fixed">Fixed</option>
+      </select>
+
+      <label>Change Thumbnail</label>
+      <input type="file" name="thumbnail_image" accept="image/*" onchange="previewEditImage(event)">
+      <img id="editPreview" class="image-preview">
+
+      <button type="submit" class="btn btn-primary btn-full">Update Project</button>
+    </form>
+  </div>
+</div>
+
+<!-- ❌ Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+  <div class="modal-box center small">
+    <span class="close" onclick="closeDeleteModal()">&times;</span>
+    <h3>Delete Project</h3>
+    <p>Are you sure you want to delete <strong id="deleteProjectTitle"></strong>?</p>
+
+    <form id="deleteForm" method="POST">
+      <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+
+<!-- Modal Handling script -->
+<script>
+  // Modals
+  const createModal = document.getElementById("createModal");
+  const editModal = document.getElementById("editModal");
+  const deleteModal = document.getElementById("deleteModal");
+
+  function openCreateModal() { createModal.style.display = "block"; }
+  function closeCreateModal() { createModal.style.display = "none"; }
+
+  function openEditModal(project) {
+    document.getElementById('editForm').action = `/admin/projects/${project.id}/update`;
+    document.getElementById('editTitle').value = project.title;
+    document.getElementById('editShortDesc').value = project.short_description || '';
+    // document.getElementById('editFullDesc').value = project.full_description || '';
+    if (editFullEditor) {
+      editFullEditor.setData(project.full_description || '');
+    }
+
+    document.getElementById('editCategory').value = project.category || '';
+    document.getElementById('editComplexity').value = project.complexity_level || 'Beginner';
+    document.getElementById('editPrice').value = project.estimated_price || 0;
+    document.getElementById('editPriceType').value = project.price_type || 'quote';
+    if(project.thumbnail_image) document.getElementById('editPreview').src = project.thumbnail_image;
+    editModal.style.display = 'block';
+  }
+  function closeEditModal() { editModal.style.display = "none"; }
+
+  function openDeleteModal(id, title) {
+    deleteModal.classList.add("active");
+    document.getElementById("deleteProjectTitle").textContent = title;
+    document.getElementById("deleteForm").action = `/admin/projects/${id}/delete`;
+  }
+  function closeDeleteModal() { deleteModal.classList.remove("active"); }
+
+  // Image preview
+  function previewCreateImage(event) {
+    document.getElementById("createPreview").src = URL.createObjectURL(event.target.files[0]);
+  }
+  function previewEditImage(event) {
+    document.getElementById("editPreview").src = URL.createObjectURL(event.target.files[0]);
+  }
+
+  // Close modal clicking outside
+  window.onclick = function(event) {
+    if(event.target == createModal) closeCreateModal();
+    if(event.target == editModal) closeEditModal();
+    if(event.target == deleteModal) closeDeleteModal();
+  };
+</script>
+
+
+<!-- CKeditor script -->
+ <script>
+let createFullEditor;
+let editFullEditor;
+
+// Initialize CKEditor for "Create Project" modal
+ClassicEditor
+  .create(document.querySelector('#createFullDesc'), {
+    placeholder: 'Write full project description...',
+    toolbar: [
+      'heading', '|',
+      'bold', 'italic', 'link',
+      'bulletedList', 'numberedList',
+      'blockQuote', '|',
+      'undo', 'redo'
+    ]
+  })
+  .then(editor => { createFullEditor = editor; })
+  .catch(error => console.error(error));
+
+// Initialize CKEditor for "Edit Project" modal
+ClassicEditor
+  .create(document.querySelector('#editFullDesc'), {
+    placeholder: 'Edit full project description...',
+    toolbar: [
+      'heading', '|',
+      'bold', 'italic', 'link',
+      'bulletedList', 'numberedList',
+      'blockQuote', '|',
+      'undo', 'redo'
+    ]
+  })
+  .then(editor => { editFullEditor = editor; })
+  .catch(error => console.error(error));
+
+// Ensure CKEditor data is submitted with the form
+document.querySelector('#createModal form').addEventListener('submit', function () {
+  if (createFullEditor) {
+    document.getElementById('createFullDesc').value = createFullEditor.getData();
+  }
+});
+
+document.getElementById('editForm').addEventListener('submit', function () {
+  if (editFullEditor) {
+    document.getElementById('editFullDesc').value = editFullEditor.getData();
+  }
+});
+</script>

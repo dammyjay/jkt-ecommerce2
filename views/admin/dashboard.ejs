@@ -1,0 +1,224 @@
+<!-- 
+<div class="admin-dashboard container" style="margin-top: var(--s-lg);">
+
+  <h1 style="font-size: 2rem; margin-bottom: var(--s-sm);">
+    Welcome, <%= user.fullname %> 👋
+  </h1>
+  <p style="color: var(--muted); margin-bottom: var(--s-md);">
+    Here’s your store overview:
+  </p>
+
+  <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s-md); margin-top: var(--s-md);">
+    
+    <div class="card dashboard-card">
+      <i class="fa fa-box dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.totalProducts %></h2>
+      <p class="dashboard-label">Products</p>
+    </div>
+
+    <div class="card dashboard-card">
+      <i class="fa fa-shopping-cart dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.totalOrders %></h2>
+      <p class="dashboard-label">Orders</p>
+    </div>
+
+    <div class="card dashboard-card">
+      <i class="fa fa-users dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.totalUsers %></h2>
+      <p class="dashboard-label">Users</p>
+    </div>
+
+    <div class="card dashboard-card">
+      <i class="fa fa-coins dashboard-icon"></i>
+      <h2 class="dashboard-number">₦<%= stats.totalSales %></h2>
+      <p class="dashboard-label">Total Sales</p>
+    </div>
+
+  </div>
+
+  <div class="admin-links" style="margin-top: var(--s-lg); text-align: center;">
+    <a href="/admin/products" class="btn btn-primary" style="margin: var(--s-xs);">
+      <i class="fa fa-box"></i> Manage Products
+    </a>
+    <a href="/admin/orders" class="btn btn-primary" style="margin: var(--s-xs);">
+      <i class="fa fa-shopping-cart"></i> Manage Orders
+    </a>
+    <a href="/admin/users" class="btn btn-primary" style="margin: var(--s-xs);">
+      <i class="fa fa-users"></i> Manage Users
+    </a>
+  </div>
+
+</div> -->
+
+
+<div class="admin-dashboard container" style="margin-top: var(--s-lg);">
+
+  <h1 style="font-size: 2rem; margin-bottom: var(--s-sm);">
+    Welcome, <%= user.fullname %> 👋
+  </h1>
+  <p style="color: var(--muted); margin-bottom: var(--s-md);">
+    Here’s your store overview:
+  </p>
+
+  <!-- DASHBOARD CARDS -->
+  <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s-md); margin-top: var(--s-md);">
+
+    <!-- Products -->
+    <div class="card dashboard-card">
+      <i class="fa fa-box dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.totalProducts %></h2>
+      <p class="dashboard-label">Products</p>
+    </div>
+
+    <!-- Orders -->
+    <div class="card dashboard-card">
+      <i class="fa fa-shopping-cart dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.totalOrders %></h2>
+      <p class="dashboard-label">Orders</p>
+    </div>
+
+    <!-- Users -->
+    <div class="card dashboard-card">
+      <i class="fa fa-users dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.totalUsers %></h2>
+      <p class="dashboard-label">Users</p>
+    </div>
+
+    <!-- Total Sales -->
+    <div class="card dashboard-card">
+      <i class="fa fa-coins dashboard-icon"></i>
+      <h2 class="dashboard-number">₦<%= stats.totalSales %></h2>
+      <p class="dashboard-label">Total Sales</p>
+    </div>
+
+    <!-- Pending Orders -->
+    <div class="card dashboard-card">
+      <i class="fa fa-hourglass-half dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.pendingOrders %></h2>
+      <p class="dashboard-label">Pending Orders</p>
+    </div>
+
+    <!-- Low Stock Products -->
+    <div class="card dashboard-card">
+      <i class="fa fa-exclamation-triangle dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.lowStock %></h2>
+      <p class="dashboard-label">Low Stock</p>
+    </div>
+
+    <!-- New Users (Last 7 days) -->
+    <div class="card dashboard-card">
+      <i class="fa fa-user-plus dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.newUsers %></h2>
+      <p class="dashboard-label">New Users</p>
+    </div>
+
+    <!-- New Orders (Last 7 days) -->
+    <div class="card dashboard-card">
+      <i class="fa fa-truck dashboard-icon"></i>
+      <h2 class="dashboard-number"><%= stats.newOrders %></h2>
+      <p class="dashboard-label">New Orders</p>
+    </div>
+
+  </div>
+
+  <!-- SALES CHART -->
+  <div class="card" style="margin-top: var(--s-lg); padding: var(--s-md);">
+    <h3 style="margin-bottom: var(--s-md);">Sales Over Time</h3>
+    <canvas id="salesChart" style="width:100%; height:300px;"></canvas>
+  </div>
+
+  <!-- ORDERS STATUS CHART -->
+  <div class="card" style="margin-top: var(--s-lg); padding: var(--s-md);">
+    <h3 style="margin-bottom: var(--s-md);">Orders by Status</h3>
+    <canvas id="ordersChart" style="width:100%; height:300px;"></canvas>
+  </div>
+
+  <!-- RECENT ORDERS -->
+  <div class="card" style="margin-top: var(--s-lg); padding: var(--s-md);">
+    <h3 style="margin-bottom: var(--s-md);">Recent Orders</h3>
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>User</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% recentOrders.forEach(order => { %>
+            <tr>
+              <td>#<%= order.id %></td>
+              <td><%= order.user_name %></td>
+              <td>₦<%= order.total_amount %></td>
+              <td><%= order.status %></td>
+              <td><%= order.created_at.toDateString() %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- QUICK LINKS -->
+  <div class="admin-links" style="margin-top: var(--s-lg); text-align: center;">
+    <a href="/admin/products" class="btn btn-primary" style="margin: var(--s-xs);">
+      <i class="fa fa-box"></i> Manage Products
+    </a>
+    <a href="/admin/orders" class="btn btn-primary" style="margin: var(--s-xs);">
+      <i class="fa fa-shopping-cart"></i> Manage Orders
+    </a>
+    <a href="/admin/users" class="btn btn-primary" style="margin: var(--s-xs);">
+      <i class="fa fa-users"></i> Manage Users
+    </a>
+    <a href="/admin/categories" class="btn btn-primary" style="margin: var(--s-xs);">
+      <i class="fa fa-tags"></i> Manage Categories
+    </a>
+  </div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const salesCtx = document.getElementById('salesChart').getContext('2d');
+const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+
+const salesChart = new Chart(salesCtx, {
+  type: 'line',
+  data: {
+    labels: <%= JSON.stringify(stats.salesByDate.labels) %>,
+    datasets: [{
+      label: 'Sales',
+      data: <%= JSON.stringify(stats.salesByDate.data) %>,
+      backgroundColor: 'rgba(134,102,15,0.2)',
+      borderColor: 'var(--primary)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } }
+  }
+});
+
+const ordersChart = new Chart(ordersCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Pending', 'Completed', 'Cancelled'],
+    datasets: [{
+      data: [
+        <%= stats.ordersByStatus.pending %>,
+        <%= stats.ordersByStatus.completed %>,
+        <%= stats.ordersByStatus.cancelled %>
+      ],
+      backgroundColor: ['#f8b500', '#22c55e', '#ef4444']
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+</script>

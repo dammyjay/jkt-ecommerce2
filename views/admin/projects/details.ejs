@@ -1,0 +1,175 @@
+<div class="container">
+    
+    <h1><%= project.title %></h1>
+    <p><%- project.full_description %></p>
+
+    <hr>
+    <h3>Gallery</h3>
+
+    <!-- Upload Form -->
+    <form action="/admin/projects/<%= project.id %>/images" method="POST" enctype="multipart/form-data" class="upload-form">
+    <label>Upload Project Images</label>
+    <input type="file" name="images" multiple accept="image/*">
+    <button type="submit" class="btn btn-primary">Upload Images</button>
+    </form>
+
+    <!-- Display Existing Images -->
+    <div class="gallery">
+    <% images.forEach(img => { %>
+        <div class="gallery-item">
+        <img src="<%= img.image_url %>" alt="Project Image">
+        <!-- <form action="/admin/projects/images/<%= img.id %>/delete" method="POST">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form> -->
+
+        <button 
+                class="btn btn-danger btn-sm" 
+                onclick="confirmDelete('<%= img.id %>', 'image', '<%= img.image_url %>')"
+            >
+                Delete
+    </button>
+        </div>
+    <% }) %>
+    </div>
+
+    <hr>
+    <h3>Demo Videos</h3>
+
+    <!-- Upload Form -->
+    <form action="/admin/projects/<%= project.id %>/videos" method="POST" enctype="multipart/form-data" class="upload-form">
+    <label>Video Type</label>
+    <select name="video_type" class="video-type-select">
+        <option value="youtube">YouTube</option>
+        <option value="cloudinary">Upload Video</option>
+    </select>
+
+    <div class="youtube-url">
+        <label>YouTube URL</label>
+        <input type="url" name="video_url">
+    </div>
+
+    <div class="upload-video">
+        <label>Upload Video</label>
+        <input type="file" name="video_file" accept="video/*" onchange="previewVideo(event)">
+        <video id="videoPreview" controls class="video-preview" style="display:none;"></video>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Add Video</button>
+    </form>
+
+
+    <h3>Demo Videos</h3>
+
+    <div class="videos">
+    <% videos.forEach(v => { %>
+        <div class="video-item">
+        <% if(v.video_type === 'youtube'){ 
+            // Convert normal YouTube URL to embed URL
+            const embedUrl = v.video_url.includes("watch?v=") ? v.video_url.replace("watch?v=", "embed/") : v.video_url;
+        %>
+            <iframe width="300" height="170" src="<%= embedUrl %>" frameborder="0" allowfullscreen></iframe>
+        <% } else { %>
+            <video width="300" height="170" controls>
+            <source src="<%= v.video_url %>" type="video/mp4">
+            Your browser does not support the video tag.
+            </video>
+        <% } %>
+        <!-- <form action="/admin/projects/videos/<%= v.id %>/delete" method="POST">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form> -->
+
+        <button 
+                class="btn btn-danger btn-sm" 
+                onclick="confirmDelete('<%= v.id %>', 'video')"
+            >
+                Delete
+            </button>
+        </div>
+    <% }) %>
+    </div>
+
+    <!-- ❌ Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal" style="display: none;">
+    <div class="modal-box center small">
+        <span class="close" onclick="closeDeleteModal()">&times;</span>
+
+        <h3>Delete Item</h3>
+        <p>
+        Are you sure you want to delete  
+        <strong id="deleteItemName"></strong>?
+        </p>
+
+        <form id="deleteForm" method="POST">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-danger">
+            Yes, Delete
+        </button>
+        </form>
+    </div>
+    </div>
+
+</div>
+
+
+<!-- Scripts -->
+<script>
+  // Toggle YouTube / Cloudinary fields
+  const videoTypeSelect = document.querySelector(".video-type-select");
+  const youtubeDiv = document.querySelector(".youtube-url");
+  const uploadDiv = document.querySelector(".upload-video");
+
+  function toggleVideoFields() {
+    if (videoTypeSelect.value === "youtube") {
+      youtubeDiv.style.display = "block";
+      uploadDiv.style.display = "none";
+    } else {
+      youtubeDiv.style.display = "none";
+      uploadDiv.style.display = "block";
+    }
+  }
+
+  toggleVideoFields();
+  videoTypeSelect.addEventListener("change", toggleVideoFields);
+
+  // Video preview
+  function previewVideo(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const preview = document.getElementById("videoPreview");
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = "block";
+    }
+  }
+
+  
+  const deleteModal = document.getElementById('deleteModal');
+  const deleteItemName = document.getElementById('deleteItemName');
+  const deleteForm = document.getElementById('deleteForm');
+
+  function confirmDelete(id, type, name = '') {
+    // Set modal info
+    deleteItemName.textContent = name || `this ${type}`;
+    
+    // Set form action depending on type
+    if(type === 'image'){
+      deleteForm.action = `/admin/projects/images/${id}/delete`;
+    } else if(type === 'video'){
+      deleteForm.action = `/admin/projects/videos/${id}/delete`;
+    }
+
+    // Show modal
+    deleteModal.style.display = 'block';
+  }
+
+  function closeDeleteModal() {
+    deleteModal.style.display = 'none';
+    deleteForm.action = '';
+  }
+
+  // Close modal when clicking outside
+  window.onclick = function(event) {
+    if(event.target == deleteModal) closeDeleteModal();
+  }
+</script>

@@ -1,0 +1,16 @@
+<h2>Payment Milestones</h2>
+
+<% milestones.forEach(m => { %>
+  <div class="card">
+    <h4><%= m.title %></h4>
+    <p>Amount: ₦<%= m.amount %></p>
+
+    <% if (!m.is_paid) { %>
+      <form action="/pay/milestone/<%= m.id %>" method="POST">
+        <button>Pay Now</button>
+      </form>
+    <% } else { %>
+      <span style="color:green;">Paid ✔</span>
+    <% } %>
+  </div>
+<% }) %>

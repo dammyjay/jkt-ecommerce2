@@ -1,0 +1,43 @@
+<!-- <div class="container">
+  <h1>Add Testimonial</h1>
+
+  <form action="/users/testimonials/create" method="POST">
+    <label>Customer Name</label>
+    <input type="text" name="name" required>
+
+    <label>Testimonial Message</label>
+    <textarea name="message" rows="4" required></textarea>
+
+    <button class="btn btn-primary">Add Testimonial</button>
+  </form>
+</div>
+ -->
+
+
+ <div class="container">
+  <h1>Share Your Experience</h1>
+
+  <form action="/users/testimonials/create" method="POST" enctype="multipart/form-data">
+
+    <label>Your Name</label>
+    <input type="text" name="name" required>
+
+    <label>Your Rating</label>
+    <select name="rating" required>
+      <option value="">Select rating</option>
+      <option value="5">★★★★★ Excellent</option>
+      <option value="4">★★★★☆ Very Good</option>
+      <option value="3">★★★☆☆ Good</option>
+      <option value="2">★★☆☆☆ Fair</option>
+      <option value="1">★☆☆☆☆ Poor</option>
+    </select>
+
+    <label>Your Testimonial</label>
+    <textarea name="message" rows="4" required></textarea>
+
+    <label>Profile Photo (optional)</label>
+    <input type="file" name="image" accept="image/*">
+
+    <button class="btn btn-primary">Submit Testimonial</button>
+  </form>
+</div>

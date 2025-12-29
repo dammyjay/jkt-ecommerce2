@@ -1,0 +1,122 @@
+<!-- ======================= HERO / BANNER ======================= -->
+<section class="home">
+  <div class="container home-banner-card">
+    <img src="/images/banner.jpg" alt="Home Banner" class="home-banner">
+    <h2>Welcome to JKT E-Commerce</h2>
+    <p>Discover amazing electronics, gadgets, and more.</p>
+    <a href="/products" class="btn btn-primary">Start Shopping</a>
+  </div>
+</section>
+
+<!-- ======================= CATEGORIES ======================= -->
+<section class="categories">
+  <div class="container home-banner-card">
+    <h2>Shop by Category</h2>
+    <div class="category-grid">
+      <% categories.forEach(category => { %>
+        <div class="card category-card" onclick="location.href='/products?category=<%= category.id %>'">
+          <img src="<%= category.image_url %>" alt="<%= category.name %>">
+          <p><%= category.name %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= FEATURED PRODUCTS ======================= -->
+<section class="featured-products">
+  <div class="container home-banner-card">
+    <h2>Featured Products</h2>
+    <div class="scroll-slider">
+      <% featuredProducts.forEach(product => { %>
+        <div class="card product-card">
+          <img src="<%= product.image_url %>" alt="<%= product.name %>">
+          <h3><%= product.name %></h3>
+          <p class="price">₦<%= product.price %></p>
+          <a href="/products/<%= product.id %>" class="btn btn-secondary btn-full">View Product</a>
+        </div>
+      <% }) %>
+    </div>
+    <div class="btn btn-sm">
+      <a href="/products?featured=true" class="btn btn-primary">View More</a>
+    </div>
+  </div>
+  
+</section>
+
+<!-- ======================= PROMOTIONS ======================= -->
+<section class="promotions">
+  <div class="container home-banner-card">
+    <h2>Hot Deals & Promotions</h2>
+    <div class="scroll-slider promo-slider">
+      <% promotions.forEach(promo => { %>
+        <div class="card promo-card">
+          <img src="<%= promo.image_url %>" alt="<%= promo.title %>">
+          <h3><%= promo.title %></h3>
+          <p class="discount"><%= promo.discount %> OFF</p>
+        </div>
+      <% }) %>
+    </div>
+    <div class="btn btn-sm">
+      <a href="/promotions" class="btn btn-primary">View More</a>
+    </div>
+  </div>
+</section>
+
+
+<section class="testimonials">
+  <div class="container home-banner-card">
+    <h2>What Our Customers Say</h2>
+
+    <div class="scroll-slider testimonial-slider">
+      <% testimonials.forEach(t => { %>
+        <div class="card testimonial-card">
+
+          <% if (t.image_url) { %>
+            <img src="<%= t.image_url %>" class="testimonial-avatar" alt="<%= t.name %>" style="width:60px; height:60px; border-radius: 50%;">
+          <% } else { %>
+            <div class="testimonial-avatar placeholder">
+              <%= t.name.charAt(0).toUpperCase() %>
+            </div>
+          <% } %>
+
+          <div class="stars">
+            <% for(let i = 1; i <= 5; i++) { %>
+              <span class="<%= i <= t.rating ? 'star active' : 'star' %>">★</span>
+            <% } %>
+          </div>
+
+          <p class="testimonial-message">"<%= t.message %>"</p>
+          <p class="testimonial-name">— <%= t.name %></p>
+        </div>
+      <% }) %>
+    </div>
+
+    <div class="btn btn-sm">
+      <a href="/users/testimonials" class="btn btn-secondary">
+        Leave a Testimony
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= NEW ARRIVALS ======================= -->
+<section class="new-arrivals">
+  <div class="container home-banner-card">
+    <h2>New Arrivals</h2>
+    <div class="scroll-slider">
+      <% newProducts.forEach(product => { %>
+        <div class="card product-card">
+          <img src="<%= product.image_url %>" alt="<%= product.name %>">
+          <h3><%= product.name %></h3>
+          <p class="price">₦<%= product.price %></p>
+          <a href="/products/<%= product.id %>" class="btn btn-secondary btn-full">View Product</a>
+        </div>
+      <% }) %>
+    </div>
+    <div class="btn btn-sm">
+      <a href="/products?new=true" class="btn btn-primary">View More</a>
+    </div>
+  </div>
+</section>
+

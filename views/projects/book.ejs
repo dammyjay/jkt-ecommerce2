@@ -1,0 +1,27 @@
+<div class="container">
+    
+</div>
+
+<section>
+    <div class="form-page">
+        <div class="card form-card">
+            <h2>Book <%= project.title %></h2>
+
+            <form action="/projects/<%= project.id %>/book" method="POST">
+                <p>Please provide details about your project requirements.</p>
+            <label>Project Description</label>
+            <textarea name="description" required></textarea>
+
+            <label>Expected Budget</label>
+            <input type="number" name="expected_budget" required>
+
+            <label>Timeline</label>
+            <input type="text" name="timeline" required>
+
+            <button type="submit" class="btn btn-primary">
+                Submit Booking
+            </button>
+            </form>
+        </div>
+    </div>
+</section>
