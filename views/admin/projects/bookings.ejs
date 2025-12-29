@@ -1,149 +1,3 @@
-<!-- <div class="container">
-  <h1>📌 Project Bookings</h1>
-
-  <div class="table-container">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>User</th>
-          <th>Project</th>
-          <th>Status</th>
-          <th>Quotation</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <% bookings.forEach(b => { %>
-          <tr>
-            <td><%= b.fullname %></td>
-            <td><%= b.title %></td>
-            <td>
-              <span class="status <%= b.status %>"><%= b.status %></span>
-            </td>
-            <td>
-              <% if (!b.quotation_id) { %>
-                <button 
-                  class="btn btn-primary btn-sm"
-                  onclick="openQuotationModal(
-                    '<%= b.id %>',
-                    '<%= b.fullname %>',
-                    '<%= b.title %>',
-                    '', '', ''
-                  )"
-                >
-                  📄 Send Quotation
-                </button>
-
-              <% } else if (!b.is_locked) { %>
-                <button 
-                  class="btn btn-warning btn-sm"
-                  onclick="openQuotationModal(
-                    '<%= b.id %>',
-                    '<%= b.fullname %>',
-                    '<%= b.title %>',
-                    '<%= b.quoted_amount %>',
-                    '<%= b.delivery_timeline %>',
-                    `<%- b.quotation_html %>`
-                  )"
-                >
-                  ✏️ Edit Quotation
-                </button>
-
-              <% } else { %>
-                <span class="badge danger">🔒 Accepted</span>
-              <% } %>
-            </td>
-
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-
-<div id="quotationModal" class="modal">
-  <div class="modal-box">
-    <h3>📄 Send Quotation</h3>
-    <p id="quotationInfo"></p>
-
-    <form 
-      action="/admin/projects/quotation" 
-      method="POST" 
-      enctype="multipart/form-data"
-    >
-      <input type="hidden" name="booking_id" id="bookingId">
-
-      <label>Quoted Amount</label>
-      <input type="number" name="quoted_amount" required>
-
-      <label>Delivery Timeline</label>
-      <input type="text" name="delivery_timeline" required>
-
-      <label>Quotation Content</label>
-      <textarea name="quotation_html" id="quotationEditor" required></textarea>
-
-
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeQuotationModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Send Quotation</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-
-<script>
-  function openQuotationModal(id, user, project) {
-    document.getElementById("bookingId").value = id;
-    document.getElementById("quotationInfo").innerText =
-      `Sending quotation to ${user} for "${project}"`;
-    document.getElementById("quotationModal").style.display = "block";
-  }
-
-  function closeQuotationModal() {
-    document.getElementById("quotationModal").style.display = "none";
-  }
-
-    function openQuotationModal(
-    id,
-    user,
-    project,
-    amount = '',
-    timeline = '',
-    html = ''
-  ) {
-    document.getElementById("bookingId").value = id;
-    document.getElementById("quotationInfo").innerText =
-      `Quotation for ${user} – "${project}"`;
-
-    document.querySelector('input[name="quoted_amount"]').value = amount;
-    document.querySelector('input[name="delivery_timeline"]').value = timeline;
-
-    if (html) {
-      CKEDITOR.instances.quotationEditor.setData(html);
-    } else {
-      CKEDITOR.instances.quotationEditor.setData('');
-    }
-
-    document.getElementById("quotationModal").style.display = "block";
-  }
-
-  window.onclick = function(event) {
-    const modal = document.getElementById("quotationModal");
-    if (event.target == modal) {
-      closeQuotationModal();
-    }
-  }
-</script>
-
-
-<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
-
-<script>
-  CKEDITOR.replace("quotationEditor");
-</script> -->
-
 
 <div class="container">
   <h1>📌 Project Bookings</h1>
@@ -163,7 +17,13 @@
         <% bookings.forEach(b => { %>
           <tr>
             <td><%= b.fullname %></td>
-            <td><%= b.title %></td>
+            <!-- <td><%= b.title %></td> -->
+             <td><% if (b.project_id) { %>
+              <strong>Project:</strong> <%= b.project_title %>
+              <% } else { %>
+                <strong>Custom Project:</strong> <%= b.custom_title %>
+              <% } %>
+            </td>
             <td>
               <span class="status <%= b.status %>"><%= b.status %></span>
             </td>

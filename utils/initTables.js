@@ -166,6 +166,13 @@ async function initTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      ALTER TABLE project_bookings
+        ALTER COLUMN project_id DROP NOT NULL;
+
+      ALTER TABLE project_bookings
+        ADD COLUMN IF NOT EXISTS custom_title VARCHAR(200);
+
+
       -- =========================
       -- PROJECT QUOTATIONS
       -- =========================

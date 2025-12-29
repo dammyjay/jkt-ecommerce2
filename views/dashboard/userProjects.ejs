@@ -14,8 +14,9 @@
     </tr>
     <% bookings.forEach(b => { %>
       <tr>
-        <td><%= b.title %></td>
-        <td><%= b.description %></td>
+        <!-- <td><%= b.title %></td> -->
+         <td><%= b.project_title %></td>
+        <td class="description"><%= b.description %></td>
         <td><%= b.status %></td>
         <!-- <td>
           <% if (b.status === 'quoted') { %>

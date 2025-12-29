@@ -11,22 +11,40 @@ exports.listProjects = async (req, res) => {
 };
 
 // PROJECT DETAILS
+// exports.projectDetails = async (req, res) => {
+//   const projectId = req.params.id;
+
+//   const project = await pool.query("SELECT * FROM projects WHERE id=$1", [
+//     projectId,
+//   ]);
+
+//   const images = await pool.query(
+//     "SELECT * FROM project_images WHERE project_id=$1",
+//     [projectId]
+//   );
+
+//   const videos = await pool.query(
+//     "SELECT * FROM project_videos WHERE project_id=$1",
+//     [projectId]
+//   );
+
+//   res.render("projects/details", {
+//     project: project.rows[0],
+//     images: images.rows,
+//     videos: videos.rows,
+//   });
+// };
+
 exports.projectDetails = async (req, res) => {
   const projectId = req.params.id;
 
-  const project = await pool.query("SELECT * FROM projects WHERE id=$1", [
-    projectId,
-  ]);
+  if (isNaN(projectId)) {
+    return res.status(400).send("Invalid project ID");
+  }
 
-  const images = await pool.query(
-    "SELECT * FROM project_images WHERE project_id=$1",
-    [projectId]
-  );
-
-  const videos = await pool.query(
-    "SELECT * FROM project_videos WHERE project_id=$1",
-    [projectId]
-  );
+  const project = await pool.query("SELECT * FROM projects WHERE id=$1", [projectId]);
+  const images = await pool.query("SELECT * FROM project_images WHERE project_id=$1", [projectId]);
+  const videos = await pool.query("SELECT * FROM project_videos WHERE project_id=$1", [projectId]);
 
   res.render("projects/details", {
     project: project.rows[0],
@@ -49,23 +67,30 @@ exports.showBookingForm = async (req, res) => {
   });
 };
 
+exports.showCustomBookingForm = (req, res) => {
+  // Render the form to book a brand new project
+  res.render("projects/bookCustom");
+};
 
-// BOOK PROJECT
-// exports.bookProject = async (req, res) => {
-//   const { description, expected_budget, timeline } = req.body;
-//   const projectId = req.params.id;
-//   console.log("Session user:", req.session.user);
+exports.bookCustomProject = async (req, res) => {
+  try {
+    const userId = req.session.user.id; // use session user
+    const { custom_title, description, expected_budget, timeline } = req.body;
 
+    await pool.query(
+      `INSERT INTO project_bookings
+       (user_id, custom_title, description, expected_budget, timeline, status)
+       VALUES ($1, $2, $3, $4, $5, 'pending')`,
+      [userId, custom_title, description, expected_budget || null, timeline || null]
+    );
 
-//   await pool.query(
-//     `INSERT INTO project_bookings
-//      (project_id, user_id, description, expected_budget, timeline)
-//      VALUES ($1,$2,$3,$4,$5)`,
-//     [projectId, req.session.user.id, description, expected_budget, timeline]
-//   );
+    res.redirect("/projects/dashboard/userProjects");
+  } catch (err) {
+    console.error("Custom project booking error:", err);
+    res.status(500).send("Server error");
+  }
+};
 
-//   res.redirect("/dashboard/userProjects");
-// };
 
   exports.bookProject = async (req, res) => {
     try {
@@ -102,22 +127,60 @@ exports.showBookingForm = async (req, res) => {
     }
   };
 
+//   exports.bookCustomProject = async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const { custom_title, description, expected_budget, timeline } = req.body;
+
+//     await pool.query(
+//       `INSERT INTO project_bookings
+//        (user_id, custom_title, description, expected_budget, timeline, status)
+//        VALUES ($1, $2, $3, $4, $5, 'pending')`,
+//       [userId, custom_title, description, expected_budget || null, timeline || null]
+//     );
+
+//     // res.redirect("/my-bookings?custom=success");
+//     res.redirect("/projects/dashboard/userProjects");
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Server error");
+//   }
+// };
+
 
   // LIST BOOKED PROJECTS FOR DASHBOARD
-  exports.userProjects = async (req, res) => {
-    const userId = req.session.user.id;
+  // exports.userProjects = async (req, res) => {
+  //   const userId = req.session.user.id;
 
-    const { rows } = await pool.query(
-      `SELECT pb.*, p.title, p.thumbnail_image
-      FROM project_bookings pb
-      JOIN projects p ON pb.project_id = p.id
-      WHERE pb.user_id = $1
-      ORDER BY pb.created_at DESC`,
-      [userId]
-    );
+  //   const { rows } = await pool.query(
+  //     `SELECT pb.*, p.title, p.thumbnail_image
+  //     FROM project_bookings pb
+  //     JOIN projects p ON pb.project_id = p.id
+  //     WHERE pb.user_id = $1
+  //     ORDER BY pb.created_at DESC`,
+  //     [userId]
+  //   );
 
-    res.render("dashboard/userProjects", { bookings: rows });
-  };
+  //   res.render("dashboard/userProjects", { bookings: rows });
+  // };
+
+exports.userProjects = async (req, res) => {
+  const userId = req.session.user.id;
+
+  const { rows } = await pool.query(
+    `SELECT pb.*, 
+            COALESCE(p.title, pb.custom_title) AS project_title,
+            p.thumbnail_image
+     FROM project_bookings pb
+     LEFT JOIN projects p ON pb.project_id = p.id
+     WHERE pb.user_id = $1
+     ORDER BY pb.created_at DESC`,
+    [userId]
+  );
+
+  res.render("dashboard/userProjects", { bookings: rows });
+};
+
 
 
   exports.viewQuotation = async (req, res) => {
@@ -268,21 +331,6 @@ exports.downloadQuotation = async (req, res) => {
 
   res.send(pdfBuffer);
 };
-
-
-// exports.acceptQuotation = async (req, res) => {
-//   const bookingId = req.params.id;
-
-//   await pool.query(
-//     `UPDATE project_bookings
-//      SET status = 'accepted'
-//      WHERE id = $1 AND user_id = $2`,
-//     [bookingId, req.session.user.id]
-//   );
-
-//   res.redirect("/projects/dashboard/userProjects");
-
-// };
 
 
 exports.acceptQuotation = async (req, res) => {

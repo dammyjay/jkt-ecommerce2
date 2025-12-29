@@ -824,6 +824,13 @@ select:focus {
   font-size: 14px;
 }
 
+.table td.description {
+  max-width: 400px; /* adjust as needed */
+  white-space: normal; /* allow wrapping */
+  word-wrap: break-word; /* break long words */
+  word-break: break-word;
+}
+
 .icon-btn {
   background: none;
   border: none;

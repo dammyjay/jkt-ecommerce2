@@ -333,6 +333,7 @@ exports.getBookings = async (req, res) => {
         pb.expected_budget,
         pb.timeline,
         pb.created_at,
+        pb.custom_title,
 
         u.fullname,
         p.title,
