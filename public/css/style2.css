@@ -546,6 +546,27 @@
     margin-bottom: 15px;
 }
 
+.log-with {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      cursor: pointer;
+      width: 100%;
+      border: 1px solid #e2e0e0;
+      border-radius: 30px;
+      font-size: 14px;
+    }
+
+    .log-with:hover {
+      color: #145dbf; /* darker blue on hover */
+    }
+
+    .log-with img {
+      width: 15px;
+      height: 15px;
+    }
+
 
 /* ======================================================
    BASE RESET

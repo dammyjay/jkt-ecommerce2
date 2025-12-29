@@ -14,6 +14,20 @@ router.get("/projects/create", isAdmin, (req, res) =>
 );
 
 router.post("/projects/create", isAdmin, upload.single("thumbnail_image"), admin.createProject);
+
+router.post(
+  "/projects/:id/update",
+  isAdmin,
+  upload.single("thumbnail_image"),
+  admin.updateProject
+);
+
+router.post(
+  "/projects/:id/delete",
+  isAdmin,
+  admin.deleteProject
+);
+
 router.post(
   "/projects/:id/images",
   isAdmin,

@@ -50,6 +50,111 @@ exports.createProject = async (req, res) => {
   }
 };
 
+// 🧑‍💼 ADMIN: Update project
+exports.updateProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      short_description,
+      full_description,
+      category,
+      complexity_level,
+      estimated_price,
+      price_type,
+    } = req.body;
+
+    let thumbnailUrl = null;
+
+    // Upload new thumbnail if selected
+    if (req.file) {
+      const upload = await cloudinary.uploader.upload(req.file.path, {
+        folder: "JKT-ecommerce/projects",
+      });
+      thumbnailUrl = upload.secure_url;
+    }
+
+    if (thumbnailUrl) {
+      await pool.query(
+        `UPDATE projects SET
+          title=$1,
+          short_description=$2,
+          full_description=$3,
+          category=$4,
+          complexity_level=$5,
+          estimated_price=$6,
+          price_type=$7,
+          thumbnail_image=$8
+         WHERE id=$9`,
+        [
+          title,
+          short_description,
+          full_description,
+          category,
+          complexity_level,
+          estimated_price,
+          price_type,
+          thumbnailUrl,
+          id,
+        ]
+      );
+    } else {
+      await pool.query(
+        `UPDATE projects SET
+          title=$1,
+          short_description=$2,
+          full_description=$3,
+          category=$4,
+          complexity_level=$5,
+          estimated_price=$6,
+          price_type=$7
+         WHERE id=$8`,
+        [
+          title,
+          short_description,
+          full_description,
+          category,
+          complexity_level,
+          estimated_price,
+          price_type,
+          id,
+        ]
+      );
+    }
+
+    res.redirect("/admin/projects");
+  } catch (err) {
+    console.error("❌ Error updating project:", err);
+    res.status(500).send("Server error");
+  }
+};
+
+// 🧑‍💼 ADMIN: Delete project
+exports.deleteProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Optional: get image URL first (for future Cloudinary delete)
+    const result = await pool.query(
+      "SELECT thumbnail_image FROM projects WHERE id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).send("Project not found");
+    }
+
+    // Delete project
+    await pool.query("DELETE FROM projects WHERE id = $1", [id]);
+
+    res.redirect("/admin/projects");
+  } catch (err) {
+    console.error("❌ Error deleting project:", err);
+    res.status(500).send("Server error");
+  }
+};
+
+
 // 🖼️ Add images to project gallery
 exports.addProjectImages = async (req, res) => {
   try {

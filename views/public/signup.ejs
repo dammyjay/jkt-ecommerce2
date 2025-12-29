@@ -1,59 +1,4 @@
 <section class="auth-section">
-  <!-- <div class="auth-container">
-    <div class="auth-box">
-      <h2>Create Account</h2>
-
-      <form
-        id="signupForm"
-        action="/auth/signup"
-        method="POST"
-        enctype="multipart/form-data"
-      >
-        <div class="input-group">
-          <input type="text" name="fullname" placeholder="Full Name" required />
-        </div>
-
-        <div class="input-group">
-          <input
-            type="email"
-            name="email"
-            id="emailField"
-            placeholder="Email"
-            required
-          />
-        </div>
-
-        <div class="input-group">
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            required
-          />
-        </div>
-
-        <div class="input-group">
-          <label for="profileImage">Upload Profile Image</label>
-          <input type="file" name="profileImage" accept="image/*" />
-        </div>
-
-        <button type="submit" class="btn">Sign Up</button>
-      </form>
-
-      <div class="social-login">
-        <p>Or continue with</p>
-        <div class="social-buttons">
-          <a href="/auth/google" class="google-btn">Google</a>
-          <a href="/auth/facebook" class="facebook-btn">Facebook</a>
-          <a href="/auth/linkedin" class="linkedin-btn">LinkedIn</a>
-        </div>
-      </div>
-
-      <p class="note">
-        Already have an account? <a href="/auth/login">Login</a>
-      </p>
-    </div>
-  </div> -->
 
    <div class="form-page">
     <div class="card form-card">
@@ -83,15 +28,6 @@
           placeholder="Email"
           required
         />
-
-        <!-- <label>Password</label>
-        <input
-          type="password"
-          name="password"
-          class="input"
-          placeholder="Password"
-          required
-        /> -->
 
         <label>Password</label>
         <div class="password-wrapper">
@@ -142,10 +78,16 @@
       <p style="text-align: center;">Or continue with</p>
 
       <div style="display: grid; gap: 10px;">
-        <a href="/auth/google" class="btn btn-secondary btn-full" style="background-color: red;">Google</a>
+        <!-- <a href="/auth/google" class="btn btn-secondary btn-full" style="background-color: red;">Google</a> -->
         <!-- <a href="/auth/facebook" class="btn btn-secondary btn-full" style="background-color: rgb(0, 4, 255);">Facebook</a>
         <a href="/auth/linkedin" class="btn btn-secondary btn-full" style="background-color: #0077b5;">LinkedIn</a> -->
       </div>
+      <a href="/auth/google">
+        <div class="log-with">
+          <img src="/images/goog.png" alt="Site Logo" id="logo">
+          <p style="font-size: 12px; font-weight: bold;">Log in with Google</p>
+        </div>
+      </a>
 
       <p style="margin-top: 15px; text-align: center;">
         Already have an account?

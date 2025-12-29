@@ -1,154 +1,5 @@
 
 
-
-<!-- 
-<section class="auth-section">
-  <div class="auth-container">
-    <div class="auth-box">
-      <h2>Welcome Back</h2>
-
-      <form id="loginForm">
-        <div class="input-group">
-          <input type="email" name="email" id="loginEmail" placeholder="Email" required />
-        </div>
-
-        <div class="input-group">
-          <input
-            type="password"
-            name="password"
-            id="loginPassword"
-            placeholder="Password"
-            required
-          />
-        </div>
-
-        <div style="width: 100%; text-align: left; margin-bottom: 15px;">
-          <input type="checkbox" onclick="togglePassword()" />
-          Show Password
-        </div>
-
-        <button type="submit" class="btn">Login</button>
-      </form>
-
-      <div class="social-login">
-        <p>Or continue with</p>
-        <div class="social-buttons">
-          <a href="/auth/google" class="google-btn">Google</a>
-          <a href="/auth/facebook" class="facebook-btn">Facebook</a>
-          <a href="/auth/linkedin" class="linkedin-btn">LinkedIn</a>
-        </div>
-      </div>
-
-      <p class="note">
-        Don’t have an account? <a href="/auth/signup">Sign Up</a>
-      </p>
-    </div>
-  </div>
-</section>
-
-
-<div id="otpModal" class="modal" style="display: none;">
-  <div class="modal-content">
-    <span class="close" id="closeOtp">&times;</span>
-    <h3>Email Verification</h3>
-    <p>Please enter the OTP sent to your email.</p>
-
-    <form id="otpForm">
-      <input type="email" id="otpEmail" readonly />
-      <input type="text" name="otp" maxlength="6" placeholder="Enter OTP" required />
-      <button type="submit" class="btn">Verify</button>
-    </form>
-
-    <p id="otpMessage"></p>
-  </div>
-</div>
-
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-const loginForm = document.getElementById("loginForm");
-const otpModal = document.getElementById("otpModal");
-const otpEmail = document.getElementById("otpEmail");
-const otpForm = document.getElementById("otpForm");
-const otpMessage = document.getElementById("otpMessage");
-
-// 🔐 Login submit
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const email = document.getElementById("loginEmail").value;
-  const password = document.getElementById("loginPassword").value;
-
-  const res = await fetch("/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
-  });
-
-  const data = await res.json();
-
-  // ❌ General error
-  if (!res.ok && !data.needsVerification) {
-    Swal.fire("Login Failed", data.message || "Invalid login", "error");
-    return;
-  }
-
-  // 🚨 Not verified → show OTP modal
-  if (data.needsVerification) {
-    otpEmail.value = data.email;
-    otpModal.style.display = "flex";
-    return;
-  }
-
-  // ✅ Successful login
-  if (data.success) {
-    if (data.role === "admin") {
-      window.location.href = "/admin/dashboard";
-    } else {
-      window.location.href = "/";
-    }
-  }
-});
-
-
-// 🔐 OTP submit
-otpForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const otp = otpForm.otp.value;
-  const email = otpEmail.value;
-
-  const res = await fetch("/auth/verifyOtp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, otp }),
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    Swal.fire("Verified!", "You can now log in.", "success");
-    setTimeout(() => window.location.reload(), 1500);
-  } else {
-    otpMessage.style.color = "red";
-    otpMessage.textContent = data.message;
-  }
-});
-
-// Close modal
-document.getElementById("closeOtp").onclick = () => {
-  otpModal.style.display = "none";
-};
-
-// Show password
-function togglePassword() {
-  const field = document.getElementById("loginPassword");
-  field.type = field.type === "password" ? "text" : "password";
-}
-</script> -->
-
-
 <section>
   <div class="form-page" >
     <div class="card form-card">
@@ -190,11 +41,16 @@ function togglePassword() {
       <p style="text-align: center;">Or continue with</p>
 
       <div style="display: grid; gap: 10px;">
-        <a href="/auth/google" class="btn btn-secondary btn-full" style="background-color: red;">Google</a>
+        <!-- <a href="/auth/google" class="btn btn-secondary btn-full" style="background-color: red;">Google</a> -->
         <!-- <a href="/auth/facebook" class="btn btn-secondary btn-full" style="background-color: rgb(0, 4, 255);">Facebook</a>
         <a href="/auth/linkedin" class="btn btn-secondary btn-full" style="background-color: #0077b5;">LinkedIn</a> -->
       </div>
-
+      <a href="/auth/google">
+        <div class="log-with">
+          <img src="/images/goog.png" alt="Site Logo" id="logo">
+          <p style="font-size: 12px; font-weight: bold;">Log in with Google</p>
+        </div>
+      </a>
       <p style="margin-top: 15px; text-align: center;">
         Don’t have an account?
         <a href="/auth/signup">Sign Up</a>
