@@ -48,7 +48,7 @@
     Download PDF
   </a>
 
-  <% if (quotation.status === 'quoted') { %>
+  <% if (quotation.booking_status === 'quoted') { %>
       <form 
         action="/projects/quotation/accept/<%= bookingId %>" 
         method="POST"

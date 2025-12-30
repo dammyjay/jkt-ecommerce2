@@ -183,157 +183,34 @@ exports.userProjects = async (req, res) => {
 };
 
 
-
-  exports.viewQuotation = async (req, res) => {
+exports.viewQuotation = async (req, res) => {
   const bookingId = req.params.id;
   const userId = req.session.user.id;
 
   const result = await pool.query(
-    ` 
-      SELECT 
-      q.quoted_amount,
-      q.delivery_timeline,
-      q.quotation_html,
-      p.title,
-      pb.description,
-      pb.status
-      FROM project_bookings pb
-      JOIN project_quotations q ON q.booking_id = pb.id
-      JOIN projects p ON p.id = pb.project_id
-      WHERE pb.id = $1 AND pb.user_id = $2
+    `
+    SELECT
+      q.*,
+      pb.status AS booking_status,
+      COALESCE(p.title, pb.custom_title) AS project_title
+    FROM project_quotations q
+    JOIN project_bookings pb ON pb.id = q.booking_id
+    LEFT JOIN projects p ON p.id = pb.project_id
+    WHERE pb.id = $1
+      AND pb.user_id = $2
     `,
     [bookingId, userId]
   );
 
   if (result.rows.length === 0) {
-    return res.redirect("/projects/dashboard/userProjects");
+    return res.status(404).send("Quotation not found");
   }
 
   res.render("dashboard/viewQuotation", {
     quotation: result.rows[0],
-    bookingId,
+    bookingId
   });
 };
-
-
-// exports.downloadQuotation = async (req, res) => {
-//   const bookingId = req.params.id;
-//   const userId = req.session.user.id;
-
-//   const result = await pool.query(
-//     `
-//     SELECT
-//       q.quotation_html,
-//       q.is_locked,
-//       p.title
-//     FROM project_quotations q
-//     JOIN project_bookings pb ON pb.id = q.booking_id
-//     JOIN projects p ON p.id = pb.project_id
-//     WHERE pb.id = $1 AND pb.user_id = $2
-//     `,
-//     [bookingId, userId]
-//   );
-
-//   if (result.rows.length === 0) {
-//     return res.status(403).send("Access denied");
-//   }
-
-//   const quotation = result.rows[0];
-
-//   const html = `
-//   <html>
-//     <head>
-//       <style>
-//         body {
-//           font-family: Arial;
-//           padding: 40px;
-//           position: relative;
-//         }
-
-//         /* WATERMARK */
-//         .watermark {
-//           position: fixed;
-//           top: 50%;
-//           left: 50%;
-//           transform: translate(-50%, -50%);
-//           opacity: 0.07;
-//           text-align: center;
-//           z-index: 0;
-//         }
-
-//         .watermark img {
-//           width: 300px;
-//         }
-
-//         .watermark h1 {
-//           font-size: 42px;
-//           margin-top: 10px;
-//         }
-
-//         .content {
-//           position: relative;
-//           z-index: 2;
-//         }
-
-//         .footer {
-//           margin-top: 80px;
-//         }
-
-//         .signature {
-//           margin-top: 40px;
-//         }
-
-//         .signature img {
-//           width: 160px;
-//         }
-//       </style>
-//     </head>
-
-//     <body>
-
-//       <div class="watermark">
-//         <img src="https://your-domain.com/logo.png" />
-//         <h1>JKT Technologies</h1>
-//       </div>
-
-//       <div class="content">
-//         <h2>${quotation.title} – Project Quotation</h2>
-
-//         ${quotation.quotation_html}
-
-//         <div class="footer">
-//           <hr>
-//           <p><strong>Company:</strong> JKT Technologies</p>
-//           <p><strong>Email:</strong> info@jkttech.com</p>
-
-//           <div class="signature">
-//             <p><strong>Authorized Signature</strong></p>
-//             <img src="https://your-domain.com/signature.png" />
-//             <p>Management</p>
-//           </div>
-//         </div>
-//       </div>
-
-//     </body>
-//   </html>
-//   `;
-
-//   const pdfBuffer = await html_to_pdf.generatePdf(
-//     { content: html },
-//     { format: "A4" }
-//   );
-
-//   res.set({
-//     "Content-Type": "application/pdf",
-//     // "Content-Disposition": `attachment; filename="quotation_${bookingId}.pdf"`
-//     "Content-Disposition": `attachment; filename="${quotation.title} documentation.pdf"`
-    
-//   });
-
-//   res.send(pdfBuffer);
-// };
-
-
 
 
 exports.downloadQuotation = async (req, res) => {
@@ -343,10 +220,11 @@ exports.downloadQuotation = async (req, res) => {
 
     const result = await pool.query(
       `
-      SELECT q.quotation_html, p.title
+      SELECT q.quotation_html,
+             COALESCE(p.title, pb.custom_title) AS title
       FROM project_quotations q
       JOIN project_bookings pb ON pb.id = q.booking_id
-      JOIN projects p ON p.id = pb.project_id
+      LEFT JOIN projects p ON p.id = pb.project_id
       WHERE pb.id = $1 AND pb.user_id = $2
       `,
       [bookingId, userId]
@@ -391,7 +269,7 @@ exports.downloadQuotation = async (req, res) => {
 
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${quotation.title}.pdf"`,
+      "Content-Disposition": `attachment; filename="${quotation.title} documentation.pdf"`,
     });
 
     res.send(pdfBuffer);
@@ -400,7 +278,6 @@ exports.downloadQuotation = async (req, res) => {
     res.status(500).send("Failed to generate PDF");
   }
 };
-
 
 
 exports.acceptQuotation = async (req, res) => {

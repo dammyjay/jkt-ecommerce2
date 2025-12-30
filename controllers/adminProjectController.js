@@ -534,21 +534,43 @@ exports.sendQuotation = async (req, res) => {
   );
 
   // 📧 Send / resend email
+  // const userRes = await pool.query(
+  //   `
+  //   SELECT 
+  //     u.email,
+  //     u.fullname,
+  //     p.title AS project_title
+  //   FROM project_bookings pb
+  //   JOIN users2 u ON u.id = pb.user_id
+  //   JOIN projects p ON p.id = pb.project_id
+  //   WHERE pb.id = $1
+  //   `,
+  //   [booking_id]
+  // );
+
   const userRes = await pool.query(
     `
-    SELECT 
-      u.email,
-      u.fullname,
-      p.title AS project_title
-    FROM project_bookings pb
-    JOIN users2 u ON u.id = pb.user_id
-    JOIN projects p ON p.id = pb.project_id
-    WHERE pb.id = $1
-    `,
+  SELECT 
+    u.email,
+    u.fullname,
+    COALESCE(p.title, pb.custom_title) AS project_title
+  FROM project_bookings pb
+  JOIN users2 u ON u.id = pb.user_id
+  LEFT JOIN projects p ON p.id = pb.project_id
+  WHERE pb.id = $1
+  `,
     [booking_id]
   );
 
+  if (userRes.rows.length === 0) {
+    console.error("No user found for booking:", booking_id);
+    return res.status(404).send("User not found for booking");
+  }
+
   const user = userRes.rows[0];
+
+
+  // const user = userRes.rows[0];
 
   await sendEmail({
     to: user.email,
