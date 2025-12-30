@@ -128,42 +128,6 @@ exports.bookCustomProject = async (req, res) => {
     }
   };
 
-//   exports.bookCustomProject = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const { custom_title, description, expected_budget, timeline } = req.body;
-
-//     await pool.query(
-//       `INSERT INTO project_bookings
-//        (user_id, custom_title, description, expected_budget, timeline, status)
-//        VALUES ($1, $2, $3, $4, $5, 'pending')`,
-//       [userId, custom_title, description, expected_budget || null, timeline || null]
-//     );
-
-//     // res.redirect("/my-bookings?custom=success");
-//     res.redirect("/projects/dashboard/userProjects");
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send("Server error");
-//   }
-// };
-
-
-  // LIST BOOKED PROJECTS FOR DASHBOARD
-  // exports.userProjects = async (req, res) => {
-  //   const userId = req.session.user.id;
-
-  //   const { rows } = await pool.query(
-  //     `SELECT pb.*, p.title, p.thumbnail_image
-  //     FROM project_bookings pb
-  //     JOIN projects p ON pb.project_id = p.id
-  //     WHERE pb.user_id = $1
-  //     ORDER BY pb.created_at DESC`,
-  //     [userId]
-  //   );
-
-  //   res.render("dashboard/userProjects", { bookings: rows });
-  // };
 
 exports.userProjects = async (req, res) => {
   const userId = req.session.user.id;
@@ -213,6 +177,72 @@ exports.viewQuotation = async (req, res) => {
 };
 
 
+// exports.downloadQuotation = async (req, res) => {
+//   try {
+//     const bookingId = req.params.id;
+//     const userId = req.session.user.id;
+
+//     const result = await pool.query(
+//       `
+//       SELECT q.quotation_html,
+//              COALESCE(p.title, pb.custom_title) AS title
+//       FROM project_quotations q
+//       JOIN project_bookings pb ON pb.id = q.booking_id
+//       LEFT JOIN projects p ON p.id = pb.project_id
+//       WHERE pb.id = $1 AND pb.user_id = $2
+//       `,
+//       [bookingId, userId]
+//     );
+
+//     if (result.rows.length === 0) {
+//       return res.status(403).send("Access denied");
+//     }
+
+//     const quotation = result.rows[0];
+
+//     const html = `
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <meta charset="UTF-8" />
+//           <style>
+//             body { font-family: Arial; padding: 40px; }
+//           </style>
+//         </head>
+//         <body>
+//           <h2>${quotation.title} – Project Quotation</h2>
+//           ${quotation.quotation_html}
+//         </body>
+//       </html>
+//     `;
+
+//     const browser = await puppeteer.launch({
+//       headless: "new",
+//       args: ["--no-sandbox", "--disable-setuid-sandbox"],
+//     });
+
+//     const page = await browser.newPage();
+//     await page.setContent(html, { waitUntil: "networkidle0" });
+
+//     const pdfBuffer = await page.pdf({
+//       format: "A4",
+//       printBackground: true,
+//     });
+
+//     await browser.close();
+
+//     res.set({
+//       "Content-Type": "application/pdf",
+//       "Content-Disposition": `attachment; filename="${quotation.title} documentation.pdf"`,
+//     });
+
+//     res.send(pdfBuffer);
+//   } catch (err) {
+//     console.error("PDF generation error:", err);
+//     res.status(500).send("Failed to generate PDF");
+//   }
+// };
+
 exports.downloadQuotation = async (req, res) => {
   try {
     const bookingId = req.params.id;
@@ -242,12 +272,69 @@ exports.downloadQuotation = async (req, res) => {
         <head>
           <meta charset="UTF-8" />
           <style>
-            body { font-family: Arial; padding: 40px; }
+            body {
+              font-family: Calibri, sans-serif;
+              padding: 40px;
+              position: relative;
+            }
+
+            /* WATERMARK */
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              opacity: 0.07;
+              text-align: center;
+              z-index: 0;
+            }
+
+            .watermark img {
+              width: 300px;
+            }
+
+            .watermark h1 {
+              font-size: 42px;
+              margin-top: 10px;
+            }
+
+            .content {
+              position: relative;
+              z-index: 2;
+            }
+
+            .footer {
+              margin-top: 80px;
+            }
+
+            .signature img {
+              width: 160px;
+            }
           </style>
         </head>
+
         <body>
-          <h2>${quotation.title} – Project Quotation</h2>
-          ${quotation.quotation_html}
+          <div class="watermark">
+            <img src="https://shopify.jkthub.com/images/JKT logo.png" />
+            <h1>JKT Hub Shopify</h1>
+          </div>
+
+          <div class="content">
+            <h2>${quotation.title} – Project Quotation</h2>
+            ${quotation.quotation_html}
+
+            <div class="footer">
+              <hr>
+              <p><strong>Company:</strong> JKT Hub Shopify</p>
+              <p><strong>Email:</strong> Jaykirchtechhub@gmail.com</p>
+
+              <div class="signature">
+                <p><strong>Authorized Signature</strong></p>
+                <img src="https://shopify.jkthub.com/images/JKT logo.png" />
+                <p>Management</p>
+              </div>
+            </div>
+          </div>
         </body>
       </html>
     `;
