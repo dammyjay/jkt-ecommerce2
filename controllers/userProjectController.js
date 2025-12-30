@@ -1,6 +1,7 @@
 const pool = require("../utils/db");
 const cloudinary = require("../utils/cloudinary");
 const html_to_pdf = require("html-pdf-node");
+const puppeteer = require("puppeteer");
 
 // LIST PROJECTS
 exports.listProjects = async (req, res) => {
@@ -215,122 +216,191 @@ exports.userProjects = async (req, res) => {
 };
 
 
-exports.downloadQuotation = async (req, res) => {
-  const bookingId = req.params.id;
-  const userId = req.session.user.id;
+// exports.downloadQuotation = async (req, res) => {
+//   const bookingId = req.params.id;
+//   const userId = req.session.user.id;
 
-  const result = await pool.query(
-    `
-    SELECT 
-      q.quotation_html,
-      q.is_locked,
-      p.title
-    FROM project_quotations q
-    JOIN project_bookings pb ON pb.id = q.booking_id
-    JOIN projects p ON p.id = pb.project_id
-    WHERE pb.id = $1 AND pb.user_id = $2
-    `,
-    [bookingId, userId]
-  );
+//   const result = await pool.query(
+//     `
+//     SELECT
+//       q.quotation_html,
+//       q.is_locked,
+//       p.title
+//     FROM project_quotations q
+//     JOIN project_bookings pb ON pb.id = q.booking_id
+//     JOIN projects p ON p.id = pb.project_id
+//     WHERE pb.id = $1 AND pb.user_id = $2
+//     `,
+//     [bookingId, userId]
+//   );
 
-  if (result.rows.length === 0) {
-    return res.status(403).send("Access denied");
-  }
+//   if (result.rows.length === 0) {
+//     return res.status(403).send("Access denied");
+//   }
 
-  const quotation = result.rows[0];
+//   const quotation = result.rows[0];
 
-  const html = `
-  <html>
-    <head>
-      <style>
-        body {
-          font-family: Arial;
-          padding: 40px;
-          position: relative;
-        }
+//   const html = `
+//   <html>
+//     <head>
+//       <style>
+//         body {
+//           font-family: Arial;
+//           padding: 40px;
+//           position: relative;
+//         }
 
-        /* WATERMARK */
-        .watermark {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          opacity: 0.07;
-          text-align: center;
-          z-index: 0;
-        }
+//         /* WATERMARK */
+//         .watermark {
+//           position: fixed;
+//           top: 50%;
+//           left: 50%;
+//           transform: translate(-50%, -50%);
+//           opacity: 0.07;
+//           text-align: center;
+//           z-index: 0;
+//         }
 
-        .watermark img {
-          width: 300px;
-        }
+//         .watermark img {
+//           width: 300px;
+//         }
 
-        .watermark h1 {
-          font-size: 42px;
-          margin-top: 10px;
-        }
+//         .watermark h1 {
+//           font-size: 42px;
+//           margin-top: 10px;
+//         }
 
-        .content {
-          position: relative;
-          z-index: 2;
-        }
+//         .content {
+//           position: relative;
+//           z-index: 2;
+//         }
 
-        .footer {
-          margin-top: 80px;
-        }
+//         .footer {
+//           margin-top: 80px;
+//         }
 
-        .signature {
-          margin-top: 40px;
-        }
+//         .signature {
+//           margin-top: 40px;
+//         }
 
-        .signature img {
-          width: 160px;
-        }
-      </style>
-    </head>
+//         .signature img {
+//           width: 160px;
+//         }
+//       </style>
+//     </head>
 
-    <body>
+//     <body>
 
-      <div class="watermark">
-        <img src="https://your-domain.com/logo.png" />
-        <h1>JKT Technologies</h1>
-      </div>
+//       <div class="watermark">
+//         <img src="https://your-domain.com/logo.png" />
+//         <h1>JKT Technologies</h1>
+//       </div>
 
-      <div class="content">
-        <h2>${quotation.title} – Project Quotation</h2>
+//       <div class="content">
+//         <h2>${quotation.title} – Project Quotation</h2>
 
-        ${quotation.quotation_html}
+//         ${quotation.quotation_html}
 
-        <div class="footer">
-          <hr>
-          <p><strong>Company:</strong> JKT Technologies</p>
-          <p><strong>Email:</strong> info@jkttech.com</p>
+//         <div class="footer">
+//           <hr>
+//           <p><strong>Company:</strong> JKT Technologies</p>
+//           <p><strong>Email:</strong> info@jkttech.com</p>
 
-          <div class="signature">
-            <p><strong>Authorized Signature</strong></p>
-            <img src="https://your-domain.com/signature.png" />
-            <p>Management</p>
-          </div>
-        </div>
-      </div>
+//           <div class="signature">
+//             <p><strong>Authorized Signature</strong></p>
+//             <img src="https://your-domain.com/signature.png" />
+//             <p>Management</p>
+//           </div>
+//         </div>
+//       </div>
 
-    </body>
-  </html>
-  `;
+//     </body>
+//   </html>
+//   `;
 
-  const pdfBuffer = await html_to_pdf.generatePdf(
-    { content: html },
-    { format: "A4" }
-  );
+//   const pdfBuffer = await html_to_pdf.generatePdf(
+//     { content: html },
+//     { format: "A4" }
+//   );
 
-  res.set({
-    "Content-Type": "application/pdf",
-    // "Content-Disposition": `attachment; filename="quotation_${bookingId}.pdf"`
-    "Content-Disposition": `attachment; filename="${quotation.title} documentation.pdf"`
+//   res.set({
+//     "Content-Type": "application/pdf",
+//     // "Content-Disposition": `attachment; filename="quotation_${bookingId}.pdf"`
+//     "Content-Disposition": `attachment; filename="${quotation.title} documentation.pdf"`
     
-  });
+//   });
 
-  res.send(pdfBuffer);
+//   res.send(pdfBuffer);
+// };
+
+
+
+
+exports.downloadQuotation = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    const userId = req.session.user.id;
+
+    const result = await pool.query(
+      `
+      SELECT q.quotation_html, p.title
+      FROM project_quotations q
+      JOIN project_bookings pb ON pb.id = q.booking_id
+      JOIN projects p ON p.id = pb.project_id
+      WHERE pb.id = $1 AND pb.user_id = $2
+      `,
+      [bookingId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(403).send("Access denied");
+    }
+
+    const quotation = result.rows[0];
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <style>
+            body { font-family: Arial; padding: 40px; }
+          </style>
+        </head>
+        <body>
+          <h2>${quotation.title} – Project Quotation</h2>
+          ${quotation.quotation_html}
+        </body>
+      </html>
+    `;
+
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+    });
+
+    await browser.close();
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${quotation.title}.pdf"`,
+    });
+
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("PDF generation error:", err);
+    res.status(500).send("Failed to generate PDF");
+  }
 };
+
 
 
 exports.acceptQuotation = async (req, res) => {
