@@ -189,6 +189,9 @@ async function initTables() {
       ALTER TABLE project_quotations
       ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE;
 
+      ALTER TABLE project_quotations
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
+
 
       ALTER TABLE project_quotations
       ADD COLUMN IF NOT EXISTS quotation_html TEXT;

@@ -11,22 +11,23 @@
       <th>Description</th>
       <th>Status</th>
       <th>Action</th>
+      <th>Created At</th>
+      <th>Updated At</th>
     </tr>
     <% bookings.forEach(b => { %>
       <tr>
         <!-- <td><%= b.title %></td> -->
          <td><%= b.project_title %></td>
-        <td class="description"><%= b.description %></td>
+        <!-- <td class="description"><%= b.description %></td> -->
+         <td class="description">
+            <%= b.description.length > 120
+                ? b.description.substring(0, 60) + "..."
+                : b.description
+            %>
+          </td>
+
         <td><%= b.status %></td>
-        <!-- <td>
-          <% if (b.status === 'quoted') { %>
-            <form action="/projects/quotation/accept/<%= b.id %>" method="POST">
-              <button class="btn btn-secondary btn-sm">Accept Quotation</button>
-            </form>
-          <% } else { %>
-            <span>N/A</span>
-          <% } %>
-        </td> -->
+        
         <td>
           <% if (b.status === 'quoted') { %>
             <a 
@@ -45,6 +46,8 @@
             </a>
           <% } %>
         </td>
+        <td><%= new Date(b.created_at).toLocaleDateString() %></td>
+        <td><%= b.updated_at ? new Date(b.updated_at).toLocaleDateString() : 'N/A' %></td>
 
       </tr>
     <% }) %>

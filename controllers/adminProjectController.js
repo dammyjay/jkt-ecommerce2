@@ -307,7 +307,7 @@ exports.getProjectDetails = async (req, res) => {
 // VIEW BOOKINGS (ADMIN)
 // exports.getBookings = async (req, res) => {
 //   const { rows } = await pool.query(`
-//     SELECT 
+//     SELECT
 //       pb.id,
 //       pb.status,
 //       pb.expected_budget,
@@ -334,9 +334,11 @@ exports.getBookings = async (req, res) => {
         pb.timeline,
         pb.created_at,
         pb.custom_title,
+        pb.project_id,
 
         u.fullname,
-        p.title,
+
+        COALESCE(p.title, pb.custom_title) AS project_title,
 
         q.id AS quotation_id,
         q.is_locked,
@@ -346,20 +348,57 @@ exports.getBookings = async (req, res) => {
 
       FROM project_bookings pb
       JOIN users2 u ON u.id = pb.user_id
-      JOIN projects p ON p.id = pb.project_id
+      LEFT JOIN projects p ON p.id = pb.project_id
       LEFT JOIN project_quotations q ON q.booking_id = pb.id
       ORDER BY pb.created_at DESC
     `);
 
     res.render("admin/projects/bookings", {
-      bookings: rows
+      bookings: rows,
     });
-
   } catch (err) {
     console.error("❌ Error fetching project bookings:", err);
     res.status(500).send("Failed to load bookings");
   }
 };
+
+
+// exports.getBookings = async (req, res) => {
+//   try {
+//     const { rows } = await pool.query(`
+//       SELECT 
+//         pb.id,
+//         pb.status,
+//         pb.expected_budget,
+//         pb.timeline,
+//         pb.created_at,
+//         pb.custom_title,
+
+//         u.fullname,
+//         p.title,
+
+//         q.id AS quotation_id,
+//         q.is_locked,
+//         q.quoted_amount,
+//         q.delivery_timeline,
+//         q.quotation_html
+
+//       FROM project_bookings pb
+//       JOIN users2 u ON u.id = pb.user_id
+//       JOIN projects p ON p.id = pb.project_id
+//       LEFT JOIN project_quotations q ON q.booking_id = pb.id
+//       ORDER BY pb.created_at DESC
+//     `);
+
+//     res.render("admin/projects/bookings", {
+//       bookings: rows
+//     });
+
+//   } catch (err) {
+//     console.error("❌ Error fetching project bookings:", err);
+//     res.status(500).send("Failed to load bookings");
+//   }
+// };
 
 
 exports.updateProgress = async (req, res) => {

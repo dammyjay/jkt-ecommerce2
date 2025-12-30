@@ -18,12 +18,19 @@
           <tr>
             <td><%= b.fullname %></td>
             <!-- <td><%= b.title %></td> -->
-             <td><% if (b.project_id) { %>
+             <!-- <td><% if (b.project_id) { %>
               <strong>Project:</strong> <%= b.project_title %>
               <% } else { %>
                 <strong>Custom Project:</strong> <%= b.custom_title %>
               <% } %>
+            </td> -->
+            <td>
+              <%= b.project_title %>
+              <% if (!b.project_id) { %>
+                <span class="badge info">Custom</span>
+              <% } %>
             </td>
+
             <td>
               <span class="status <%= b.status %>"><%= b.status %></span>
             </td>
@@ -31,32 +38,59 @@
             <td>
               <% if (!b.quotation_id) { %>
                 <!-- No quotation yet -->
+                <!-- <button
+                  class="btn btn-primary btn-sm"
+                  onclick="openQuotationModal(
+                    '<%= b.id %>',
+                    '<%= b.fullname %>',
+                    // '<%= b.title %>'
+                    '<%= b.project_title %>'
+                  )"
+                >
+                  📄 Send Quotation
+                </button> -->
                 <button
                   class="btn btn-primary btn-sm"
                   onclick="openQuotationModal(
                     '<%= b.id %>',
                     '<%= b.fullname %>',
-                    '<%= b.title %>'
+                    '<%= b.project_title %>'
                   )"
                 >
                   📄 Send Quotation
                 </button>
 
+
               <% } else if (!b.is_locked) { %>
                 <!-- Editable quotation -->
-                <button
+                <!-- <button
                   class="btn btn-warning btn-sm"
                   onclick="openQuotationModal(
                     '<%= b.id %>',
                     '<%= b.fullname %>',
-                    '<%= b.title %>',
+                    // '<%= b.title %>',
+                    '<%= b.project_title %>',
                     '<%= b.quoted_amount %>',
                     '<%= b.delivery_timeline %>',
                     `<%- b.quotation_html %>`
                   )"
                 >
                   ✏️ Edit Quotation
+                </button> -->
+
+                <button
+                  class="btn btn-warning btn-sm"
+                  data-booking-id="<%= b.id %>"
+                  data-user="<%= b.fullname %>"
+                  data-project="<%= b.project_title %>"
+                  data-amount="<%= b.quoted_amount %>"
+                  data-timeline="<%= b.delivery_timeline %>"
+                  data-html="<%- encodeURIComponent(b.quotation_html || '') %>"
+                  onclick="openQuotationFromBtn(this)"
+                >
+                  ✏️ Edit Quotation
                 </button>
+
 
               <% } else { %>
                 <!-- Accepted & locked -->
@@ -99,7 +133,7 @@
 </div>
 
 
-<script>
+<!-- <script>
   function openQuotationModal(
     id,
     user,
@@ -138,7 +172,59 @@
     const modal = document.getElementById("quotationModal");
     if (e.target === modal) closeQuotationModal();
   };
+</script> -->
+
+<script>
+  function openQuotationFromBtn(btn) {
+    const id = btn.dataset.bookingId;
+    const user = btn.dataset.user;
+    const project = btn.dataset.project;
+    const amount = btn.dataset.amount || '';
+    const timeline = btn.dataset.timeline || '';
+    const html = decodeURIComponent(btn.dataset.html || '');
+
+    openQuotationModal(id, user, project, amount, timeline, html);
+  }
+
+  function openQuotationModal(
+    id,
+    user,
+    project,
+    amount = '',
+    timeline = '',
+    html = ''
+  ) {
+    document.getElementById("bookingId").value = id;
+
+    document.getElementById("quotationInfo").innerText =
+      `Quotation for ${user} – "${project}"`;
+
+    document.querySelector('[name="quoted_amount"]').value = amount;
+    document.querySelector('[name="delivery_timeline"]').value = timeline;
+
+    CKEDITOR.instances.quotationEditor.setData(html);
+
+    if (amount) {
+      document.getElementById("quotationTitle").innerText = "✏️ Edit Quotation";
+      document.getElementById("quotationSubmitBtn").innerText = "Update Quotation";
+    } else {
+      document.getElementById("quotationTitle").innerText = "📄 Send Quotation";
+      document.getElementById("quotationSubmitBtn").innerText = "Send Quotation";
+    }
+
+    document.getElementById("quotationModal").style.display = "block";
+  }
+
+  function closeQuotationModal() {
+    document.getElementById("quotationModal").style.display = "none";
+  }
+
+  window.onclick = function (e) {
+    const modal = document.getElementById("quotationModal");
+    if (e.target === modal) closeQuotationModal();
+  };
 </script>
+
 
 <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 <script>
