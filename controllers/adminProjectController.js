@@ -335,6 +335,7 @@ exports.getBookings = async (req, res) => {
         pb.created_at,
         pb.custom_title,
         pb.project_id,
+        pb.description,
 
         u.fullname,
 
@@ -572,17 +573,30 @@ exports.sendQuotation = async (req, res) => {
 
   // const user = userRes.rows[0];
 
-  await sendEmail({
-    to: user.email,
-    subject: `Updated Quotation for ${user.project_title}`,
-    html: quotationTemplate({
+  // await sendEmail({
+  //   to: user.email,
+  //   subject: `Updated Quotation for ${user.project_title}`,
+  //   html: quotationTemplate({
+  //     fullname: user.fullname,
+  //     project_title: user.project_title,
+  //     amount: quoted_amount,
+  //     timeline: delivery_timeline,
+  //     company_name: "JKT Technologies",
+  //   }).html,
+  // });
+
+  await sendEmail(
+    user.email,
+    `Updated Quotation for ${user.project_title}`,
+    quotationTemplate({
       fullname: user.fullname,
       project_title: user.project_title,
       amount: quoted_amount,
       timeline: delivery_timeline,
       company_name: "JKT Technologies",
-    }).html,
-  });
+    }).html
+  );
+
 
   res.redirect("/admin/projects/bookings");
 };

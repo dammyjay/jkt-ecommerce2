@@ -1,4 +1,12 @@
 
+<style>
+  .table .td .description {
+    max-width: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
 <div class="container">
   <h1>📌 Project Bookings</h1>
 
@@ -8,6 +16,9 @@
         <tr>
           <th>User</th>
           <th>Project</th>
+          <th class="description">Description</th>
+          <th>Expected Timeline</th>
+          <th>Estimated Budget</th>
           <th>Status</th>
           <th>Quotation</th>
         </tr>
@@ -29,6 +40,14 @@
               <% if (!b.project_id) { %>
                 <span class="badge info">Custom</span>
               <% } %>
+            </td>
+            <td><%= b.description || 'N/A' %></td>
+            <td><%= b.timeline || 'N/A' %></td>
+            <td>
+              ₦<%= b.expected_budget
+                ? parseFloat(b.expected_budget).toLocaleString()
+                : 'N/A'
+              %> 
             </td>
 
             <td>
