@@ -242,7 +242,6 @@ app.get("/api/search", async (req, res) => {
         image_url AS image
       FROM products
       WHERE name ILIKE $1
-      LIMIT 5
       `,
       [`%${q}%`]
     );
@@ -257,7 +256,6 @@ app.get("/api/search", async (req, res) => {
       FROM projects
       WHERE title ILIKE $1
         AND is_active = true
-      LIMIT 5
       `,
       [`%${q}%`]
     );
