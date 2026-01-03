@@ -129,18 +129,6 @@
 
 
 
-<!-- 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const toggleBtn = document.getElementById("menu-toggle");
-    const navLinks = document.getElementById("nav-links");
-
-    toggleBtn.addEventListener("click", () => {
-      navLinks.classList.toggle("active");
-    });
-  });
-</script> -->
-
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -161,7 +149,7 @@
   });
 </script>
 
-<script>
+<!-- <script>
 const searchInput = document.getElementById("globalSearch");
 const resultsBox = document.getElementById("searchResults");
 
@@ -201,6 +189,73 @@ searchInput.addEventListener("input", () => {
           } else {
             window.location.href = `/projects/${item.id}`;
           }
+        };
+
+        resultsBox.appendChild(div);
+      });
+    }
+
+    resultsBox.style.display = "block";
+  }, 300);
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".nav-search")) {
+    resultsBox.style.display = "none";
+  }
+});
+</script> -->
+
+
+<script>
+const searchInput = document.getElementById("globalSearch");
+const resultsBox = document.getElementById("searchResults");
+
+let timeout = null;
+
+searchInput.addEventListener("input", () => {
+  clearTimeout(timeout);
+  const query = searchInput.value.trim();
+
+  if (!query) {
+    resultsBox.style.display = "none";
+    return;
+  }
+
+  timeout = setTimeout(async () => {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    resultsBox.innerHTML = "";
+
+    if (data.length === 0) {
+      resultsBox.innerHTML = `<div class="search-item empty">No results found</div>`;
+    } else {
+      data.forEach(item => {
+        const priceText =
+          item.type === "product"
+            ? `₦${Number(item.price).toLocaleString()}`
+            : item.price
+              ? `₦${Number(item.price).toLocaleString()} (${item.price_type})`
+              : "Request Quote";
+
+        const div = document.createElement("div");
+        div.className = "search-item";
+
+        div.innerHTML = `
+          <img src="${item.image || '/images/placeholder.png'}" />
+          <div class="search-info">
+            <strong>${item.title}</strong>
+            <span class="search-type">${item.type}</span>
+            <span class="search-price">${priceText}</span>
+          </div>
+        `;
+
+        div.onclick = () => {
+          window.location.href =
+            item.type === "product"
+              ? `/products/${item.id}`
+              : `/projects/${item.id}`;
         };
 
         resultsBox.appendChild(div);

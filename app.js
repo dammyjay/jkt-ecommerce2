@@ -175,9 +175,55 @@ app.get("/", async (req, res) => {
   }
 });
 
-// const userRoutes = require("./routes/userRoutes");
-// app.use("/", userRoutes);
+// This one the project and product search combined with both prices
+// app.get("/api/search", async (req, res) => {
+//   const { q } = req.query;
 
+//   if (!q || q.trim() === "") {
+//     return res.json([]);
+//   }
+
+//   try {
+//     const products = await pool.query(
+//       `
+//       SELECT 
+//         id,
+//         name AS title,
+//         'product' AS type,
+//         price,
+//         image_url AS image
+//       FROM products
+//       WHERE name ILIKE $1
+//       LIMIT 5
+//       `,
+//       [`%${q}%`]
+//     );
+
+//     const projects = await pool.query(
+//       `
+//       SELECT 
+//         id,
+//         title,
+//         'project' AS type,
+//         estimated_price AS price,
+//         thumbnail_image AS image,
+//         price_type
+//       FROM projects
+//       WHERE title ILIKE $1
+//         AND is_active = true
+//       LIMIT 5
+//       `,
+//       [`%${q}%`]
+//     );
+
+//     res.json([...products.rows, ...projects.rows]);
+//   } catch (err) {
+//     console.error("Search error:", err);
+//     res.status(500).json([]);
+//   }
+// });
+
+// while this one is only for price products  project request a quote
 app.get("/api/search", async (req, res) => {
   const { q } = req.query;
 
@@ -188,7 +234,12 @@ app.get("/api/search", async (req, res) => {
   try {
     const products = await pool.query(
       `
-      SELECT id, name AS title, 'product' AS type
+      SELECT 
+        id,
+        name AS title,
+        'product' AS type,
+        price,
+        image_url AS image
       FROM products
       WHERE name ILIKE $1
       LIMIT 5
@@ -198,10 +249,14 @@ app.get("/api/search", async (req, res) => {
 
     const projects = await pool.query(
       `
-      SELECT id, title, 'project' AS type
+      SELECT 
+        id,
+        title,
+        'project' AS type,
+        thumbnail_image AS image
       FROM projects
       WHERE title ILIKE $1
-      AND is_active = true
+        AND is_active = true
       LIMIT 5
       `,
       [`%${q}%`]
@@ -209,13 +264,12 @@ app.get("/api/search", async (req, res) => {
 
     res.json([...products.rows, ...projects.rows]);
   } catch (err) {
-    console.error(err);
+    console.error("Search error:", err);
     res.status(500).json([]);
   }
 });
 
 
-// 🧪 TEST ROUTE
 app.get("/test", (req, res) => {
   res.send("✅ JKT E-Commerce Server Running Successfully");
 });
