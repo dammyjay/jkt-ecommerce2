@@ -178,6 +178,41 @@ app.get("/", async (req, res) => {
 // const userRoutes = require("./routes/userRoutes");
 // app.use("/", userRoutes);
 
+app.get("/api/search", async (req, res) => {
+  const { q } = req.query;
+
+  if (!q || q.trim() === "") {
+    return res.json([]);
+  }
+
+  try {
+    const products = await pool.query(
+      `
+      SELECT id, name AS title, 'product' AS type
+      FROM products
+      WHERE name ILIKE $1
+      LIMIT 5
+      `,
+      [`%${q}%`]
+    );
+
+    const projects = await pool.query(
+      `
+      SELECT id, title, 'project' AS type
+      FROM projects
+      WHERE title ILIKE $1
+      AND is_active = true
+      LIMIT 5
+      `,
+      [`%${q}%`]
+    );
+
+    res.json([...products.rows, ...projects.rows]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
+});
 
 
 // 🧪 TEST ROUTE

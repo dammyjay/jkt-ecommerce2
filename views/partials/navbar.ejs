@@ -6,6 +6,17 @@
       <img src="/images/JKT logo bg.png" alt="Logo" class="nav-logo">
     </a>
 
+    <div class="nav-search">
+      <input
+        type="text"
+        id="globalSearch"
+        placeholder="Search products or projects..."
+        autocomplete="off"
+      />
+      <div id="searchResults" class="search-results"></div>
+    </div>
+
+
     <!-- Hamburger -->
     <button class="menu-toggle" id="menu-toggle">
       <i class="fa fa-bars"></i>
@@ -149,4 +160,62 @@
     });
   });
 </script>
+
+<script>
+const searchInput = document.getElementById("globalSearch");
+const resultsBox = document.getElementById("searchResults");
+
+let timeout = null;
+
+searchInput.addEventListener("input", () => {
+  clearTimeout(timeout);
+
+  const query = searchInput.value.trim();
+
+  if (!query) {
+    resultsBox.style.display = "none";
+    return;
+  }
+
+  timeout = setTimeout(async () => {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    resultsBox.innerHTML = "";
+
+    if (data.length === 0) {
+      resultsBox.innerHTML = `<div class="search-item">No results</div>`;
+    } else {
+      data.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "search-item";
+
+        div.innerHTML = `
+          <strong>${item.title}</strong>
+          <div class="search-type">${item.type}</div>
+        `;
+
+        div.onclick = () => {
+          if (item.type === "product") {
+            window.location.href = `/products/${item.id}`;
+          } else {
+            window.location.href = `/projects/${item.id}`;
+          }
+        };
+
+        resultsBox.appendChild(div);
+      });
+    }
+
+    resultsBox.style.display = "block";
+  }, 300);
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".nav-search")) {
+    resultsBox.style.display = "none";
+  }
+});
+</script>
+
 
