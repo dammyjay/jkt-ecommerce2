@@ -1,58 +1,5 @@
 const pool = require("../utils/db");
 
-// ➕ Add to cart
-// exports.addToCart = async (req, res) => {
-//   const productId = parseInt(req.params.id);
-//   const quantity = parseInt(req.body.quantity) || 1;
-
-//   if (!req.session.cart) {
-//     req.session.cart = {
-//       items: [],
-//       totalQty: 0,
-//       totalPrice: 0
-//     };
-//   }
-
-//   try {
-//     const result = await pool.query(
-//       "SELECT id, name, price, image_url FROM products WHERE id = $1",
-//       [productId]
-//     );
-
-//     if (result.rowCount === 0) {
-//       return res.redirect("/products");
-//     }
-
-//     const product = result.rows[0];
-//     const cart = req.session.cart;
-
-//     const existingItem = cart.items.find(
-//       item => item.product_id === productId
-//     );
-
-//     if (existingItem) {
-//       existingItem.quantity += quantity;
-//     } else {
-//       cart.items.push({
-//         product_id: product.id,
-//         name: product.name,
-//         price: product.price,
-//         image_url: product.image_url,
-//         quantity
-//       });
-//     }
-
-//     cart.totalQty += quantity;
-//     cart.totalPrice += product.price * quantity;
-
-//     res.redirect("/cart");
-//   } catch (error) {
-//     console.error("Add to cart error:", error);
-//     res.redirect("/products");
-//   }
-// };
-
-// 🛒 View cart
 exports.getCart = (req, res) => {
   const cart = req.session.cart || {
     items: [],

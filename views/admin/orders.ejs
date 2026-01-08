@@ -1,7 +1,14 @@
 
 
-<div class="admin-container">
-  <h2>All Orders</h2>
+ <div class="admin-container">
+
+  
+  <div class="page-header">
+    <h2>All Orders</h2>
+    <button class="btn btn-primary" onclick="openCreateOrderModal()">+ Create Order</button>
+  </div>
+
+
   <table class="table">
     <thead>
       <tr>
@@ -10,20 +17,531 @@
         <th>Total</th>
         <th>Status</th>
         <th>Date</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
       <% orders.forEach(order => { %>
         <tr>
           <td><%= order.id %></td>
-          <td><%= order.customer_name %></td>
-          <td>₦<%= order.total_amount %></td>
+          <td><%= order.user_id ? order.customer_name : order.customer_name %></td>
+          <td>₦<%= order.total_amount || '—' %></td>
           <td><%= order.status %></td>
           <td><%= new Date(order.created_at).toLocaleDateString() %></td>
+          <td>
+            <!-- <button class="btn btn-sm" onclick="openOrderDetails(<%= order.id %>)">View</button> -->
+            <button class="btn btn-sm" onclick="window.location.href='/orders/admin/<%= order.id %>'">
+              View
+            </button>
+
+          </td>
         </tr>
       <% }) %>
     </tbody>
   </table>
+
+
+  <div class="modal" id="createOrderModal">
+    <div class="modal-box">
+      <span class="close" onclick="closeModal('createOrderModal')">&times;</span>
+
+      <h3>Create Order</h3>
+
+      <form method="POST" action="/orders/admin/create">
+
+
+        <label>Customer</label>
+       
+        <label>Customer</label>
+
+        <div class="customer-search">
+          <input
+            type="text"
+            id="customerSearch"
+            placeholder="Search customer by name"
+            autocomplete="off"
+          />
+          <input type="hidden" name="customer_name" id="selectedCustomerName">
+          <input type="hidden" name="user_id" id="selectedUserId">
+
+          <div id="customerResults" class="search-results"></div>
+        </div>
+
+        <button type="button" class="btn btn-sm" onclick="enableManualCustomer()">
+          + Manual Entry
+        </button>
+
+        <div id="manualCustomer" style="display:none; margin-top:10px;">
+          <input type="text" name="manual_customer_name" placeholder="Full Name">
+          <input type="text" name="customer_phone" placeholder="Phone Number">
+        </div>
+
+        <div id="existingCustomerPhone" style="display:none;">
+          <input type="text" id="existingPhone" name="customer_phone" placeholder="Phone Number">
+        </div>
+
+        <label>Delivery Address</label>
+        <textarea name="address" required></textarea>
+
+     
+        <label>Order Items</label>
+        <div id="orderItems">
+          <div class="item-row">
+            <input type="text" class="product-search" placeholder="Search product" required>
+            <div class="search-results"></div>
+            <input type="hidden" name="items[0][product_id]">
+            <input type="number" name="items[0][quantity]" placeholder="Qty" required>
+            <input type="number" name="items[0][price]" placeholder="Price" readonly required>
+            <input type="text" class="item-total" placeholder="Total" readonly>
+            
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-sm" onclick="addItemRow()">+ Add Item</button>
+
+        <h4>Total Amount: ₦<span id="orderTotal">0</span></h4>
+        <input type="hidden" name="total_amount" id="totalAmountInput">
+
+
+        <br><br>
+        <button type="submit" class="btn btn-success">Create Order</button>
+      </form>
+    </div>
+  </div>
+
+ 
+  <div class="modal" id="orderDetailsModal">
+    <div class="modal-box">
+      <!-- <span class="close" onclick="closeModal('orderDetailsModal')">&times;</span> -->
+       <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+      <div id="orderDetailsContent">Loading...</div>
+    </div>
+  </div>
+
 </div>
 
+<script>
+  const users = <%- JSON.stringify(users) %>;
+</script>
 
+<script>
+  const products = <%- JSON.stringify(products) %>;
+</script>
+
+
+<script>
+function openOrderDetails(orderId) {
+  fetch(`/orders/admin/${orderId}`)
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById('orderDetailsContent').innerHTML = html;
+      document.getElementById('orderDetailsModal').style.display = 'flex';
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Failed to load order details");
+    });
+}
+
+
+function updateOrderTotal() {
+  let total = 0;
+
+  document.querySelectorAll('.item-total').forEach(input => {
+    total += Number(input.value) || 0;
+  });
+
+  document.getElementById('orderTotal').textContent = total;
+  document.getElementById('totalAmountInput').value = total;
+}
+
+function updateItemTotal(row) {
+  const qty = row.querySelector('input[name*="[quantity]"]');
+  const price = row.querySelector('input[name*="[price]"]');
+  const total = row.querySelector('.item-total');
+
+  function calculate() {
+    const q = Number(qty.value) || 0;
+    const p = Number(price.value) || 0;
+    total.value = q * p;
+    updateOrderTotal();
+  }
+
+  qty.addEventListener('input', calculate);
+  price.addEventListener('input', calculate);
+}
+
+function setupProductSearch(input) {
+  const row = input.closest('.item-row');
+  const resultsDiv = row.querySelector('.search-results');
+  const hiddenInput = row.querySelector('input[type="hidden"]');
+  const priceInput = row.querySelector('input[name*="[price]"]');
+
+  input.addEventListener('input', () => {
+    const query = input.value.toLowerCase().trim();
+    resultsDiv.innerHTML = '';
+
+    if (!query) return;
+
+    const matched = products.filter(p => p.name.toLowerCase().includes(query)).slice(0, 10);
+
+    matched.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'search-result';
+      div.textContent = `${p.name} (₦${p.price})`;
+
+      div.addEventListener('click', () => {
+        input.value = p.name;
+        hiddenInput.value = p.id;
+        priceInput.value = p.price;
+        resultsDiv.innerHTML = '';
+
+        // updateItemTotal(row); 
+        // updateOrderTotal();   
+      });
+
+      resultsDiv.appendChild(div);
+    });
+  });
+
+  // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+    if (!row.contains(e.target) && !resultsDiv.contains(e.target)) {
+      resultsDiv.innerHTML = '';
+    }
+  });
+}
+
+function openCreateOrderModal() {
+  document.getElementById('createOrderModal').style.display = 'flex';
+
+  document.querySelectorAll('.product-search').forEach(input => {
+    setupProductSearch(input);
+    updateItemTotal(input.closest('.item-row')); // ✅ now valid
+  });
+
+  setupCustomerSearch();
+}
+
+
+
+// Add new item row
+// function addItemRow() {
+//   const container = document.getElementById('orderItems');
+//   const index = container.children.length;
+
+//   const div = document.createElement('div');
+//   div.className = 'item-row';
+//   div.innerHTML = `
+//     <input type="text" class="product-search" placeholder="Search product" required>
+//     <input type="hidden" name="items[${index}][product_id]">
+//     <input type="number" name="items[${index}][quantity]" placeholder="Qty" required>
+//     <input type="number" name="items[${index}][price]" placeholder="Price" readonly required>
+//     <div class="search-results"></div>
+//     <button type="button" onclick="this.parentElement.remove()">Remove</button>
+//   `;
+
+//   container.appendChild(div);
+
+//   // Setup search for the new row
+//   setupProductSearch(div.querySelector('.product-search'));
+//   updateItemTotal(div); // 🔥 VERY IMPORTANT
+
+// }
+
+function addItemRow() {
+  const container = document.getElementById('orderItems');
+  const index = container.children.length;
+
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.innerHTML = `
+    <input type="text" class="product-search" placeholder="Search product" required>
+    <div class="search-results"></div>
+
+    <input type="hidden" name="items[${index}][product_id]">
+    <input type="number" name="items[${index}][quantity]" placeholder="Qty" required>
+    <input type="number" name="items[${index}][price]" placeholder="Price" readonly required>
+
+    <!-- 🔥 MISSING TOTAL FIELD (NOW FIXED) -->
+    <input type="text" class="item-total" placeholder="Total" readonly>
+
+    <button type="button" onclick="this.parentElement.remove(); updateOrderTotal()">Remove</button>
+  `;
+
+  container.appendChild(div);
+
+  setupProductSearch(div.querySelector('.product-search'));
+  updateItemTotal(div); // 🔥 attach calculation logic
+}
+
+</script>
+
+
+<script>
+function enableManualCustomer() {
+  document.getElementById('manualCustomer').style.display = 'block';
+  document.getElementById('existingCustomerPhone').style.display = 'none';
+
+  document.getElementById('customerSearch').value = '';
+  document.getElementById('selectedUserId').value = ''; // 🔥 CLEAR USER ID
+}
+
+function setupCustomerSearch() {
+  const customerInput = document.getElementById('customerSearch');
+  const resultsDiv = document.getElementById('customerResults');
+  const userIdInput = document.getElementById('selectedUserId');
+  const phoneInput = document.getElementById('existingPhone');
+  
+  console.log('Customer search initialized', users.length);
+
+  if (!customerInput) return;
+
+  customerInput.addEventListener('input', () => {
+    const query = customerInput.value.toLowerCase().trim();
+    resultsDiv.innerHTML = '';
+
+    if (!query) return;
+
+    users
+      .filter(u => u.fullname.toLowerCase().includes(query))
+      .slice(0, 10)
+      .forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'search-result';
+        div.textContent = user.fullname;
+
+        // div.onclick = () => {
+        //   customerInput.value = user.fullname;
+        //   userIdInput.value = user.id;
+        //   phoneInput.value = user.phone || '';
+
+        //   document.getElementById('existingCustomerPhone').style.display = 'block';
+        //   document.getElementById('manualCustomer').style.display = 'none';
+
+        //   resultsDiv.innerHTML = '';
+        // };
+
+        div.onclick = () => {
+          customerInput.value = user.fullname;
+          userIdInput.value = user.id;
+          phoneInput.value = user.phone || '';
+
+          document.getElementById('selectedCustomerName').value = user.fullname;
+
+          document.getElementById('existingCustomerPhone').style.display = 'block';
+          document.getElementById('manualCustomer').style.display = 'none';
+
+          resultsDiv.innerHTML = '';
+        };
+
+
+        resultsDiv.appendChild(div);
+      });
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.customer-search')) {
+      resultsDiv.innerHTML = '';
+    }
+  });
+}
+</script>
+
+
+<style>
+/* ------------------ MODAL BASE ------------------ */
+.modal {
+  display: none; /* hidden by default */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* semi-transparent background */
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* above everything */
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 8px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.modal-content.large {
+  max-width: 90%;
+  max-height: 90%;
+}
+
+/* ------------------ CLOSE BUTTON ------------------ */
+.modal .close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.modal .close:hover {
+  color: #000;
+}
+
+/* ------------------ CUSTOMER SEARCH ------------------ */
+.customer-search {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+#customerSearch {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#customerResults {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  z-index: 10001; /* above modal */
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 4px;
+  display: block; /* always rendered, hidden if empty */
+}
+
+.search-result {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.search-result:hover {
+  background-color: #f2f2f2;
+}
+
+/* ------------------ EXISTING CUSTOMER PHONE ------------------ */
+#existingCustomerPhone input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 5px;
+  box-sizing: border-box;
+}
+
+/* ------------------ MANUAL CUSTOMER ENTRY ------------------ */
+#manualCustomer input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 5px;
+  box-sizing: border-box;
+}
+
+/* ------------------ DELIVERY ADDRESS ------------------ */
+textarea[name="address"] {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 5px;
+  box-sizing: border-box;
+}
+
+/* ------------------ ORDER ITEMS ------------------ */
+#orderItems .item-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+#orderItems .item-row input[type="text"],
+#orderItems .item-row input[type="number"] {
+  flex: 1;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+#orderItems .item-row .search-results {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  z-index: 10001;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: block; /* always rendered, hidden if empty */
+}
+
+/* ------------------ BUTTONS ------------------ */
+/* .btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+} */
+
+/* .btn-primary {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #1e7e34;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+} */
+
+/* ------------------ RESPONSIVE ------------------ */
+@media (max-width: 600px) {
+  .modal-box {
+    width: 95%;
+    padding: 15px;
+  }
+
+  #orderItems .item-row {
+    flex-direction: column;
+  }
+}
+
+</style>

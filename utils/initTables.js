@@ -58,6 +58,40 @@ async function initTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS address TEXT,
+      ADD COLUMN IF NOT EXISTS created_by_admin BOOLEAN DEFAULT false;
+
+      -- Add customer_phone, customer_name, make user_id drop empty column
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS customer_name VARCHAR(20),
+      ALTER COLUMN user_id DROP NOT NULL;
+
+      ALTER TABLE orders
+      ALTER COLUMN customer_name TYPE VARCHAR(100);
+
+      ALTER TABLE orders
+      ALTER COLUMN customer_phone TYPE VARCHAR(30);
+
+
+
+      CREATE TABLE IF NOT EXISTS order_items (
+        id SERIAL PRIMARY KEY,
+        order_id INT REFERENCES orders(id) ON DELETE CASCADE,
+        product_id INT REFERENCES products(id),
+        quantity INT NOT NULL,
+        price NUMERIC(10,2)
+      );
+
+      CREATE TABLE IF NOT EXISTS invoices (
+        id SERIAL PRIMARY KEY,
+        order_id INT REFERENCES orders(id) ON DELETE CASCADE,
+        invoice_number VARCHAR(50),
+        invoice_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       -- SESSION TABLE (for connect-pg-simple)
       CREATE TABLE IF NOT EXISTS session (
         "sid" varchar PRIMARY KEY COLLATE "default",

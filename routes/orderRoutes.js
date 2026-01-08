@@ -7,9 +7,22 @@ const { isAuthenticated, isAdmin } = require("../middlewares/authMiddleware");
 router.get("/", isAuthenticated, orderController.getUserOrders);
 router.post("/create", isAuthenticated, orderController.placeOrder);
 
+
 // 🧑‍💼 Admin Orders
 router.get("/admin/manage", isAdmin, orderController.getAllOrdersAdmin);
+router.post(
+  "/admin/create",
+  isAuthenticated,
+  isAdmin,
+  orderController.adminCreateOrder
+);
 router.post("/admin/:id/update", isAdmin, orderController.updateOrderStatus);
 router.post("/admin/:id/delete", isAdmin, orderController.deleteOrder);
+router.get(
+  "/admin/:id",
+  isAuthenticated,
+  isAdmin,
+  orderController.getOrderDetailsModal
+);
 
 module.exports = router;
