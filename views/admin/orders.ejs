@@ -1,124 +1,227 @@
 
+<div class="container">
+  <div class="card">
+    <div class="admin-container">
+      <div class="page-header">
+        <h2>All Orders</h2>
+        <button class="btn btn-primary" onclick="openCreateOrderModal()">+ Create Order</button>
+      </div>
 
- <div class="admin-container">
+      <br>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Issued By</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% orders.forEach(order => { %>
+                <td><%= order.order_number %></td>
+                <td><%= order.user_id ? order.customer_name : order.customer_name %></td>
+                <td>₦<%= order.total_amount || '—' %></td>
+                 <td>
+                  <form method="POST" action="/orders/admin/<%= order.id %>/update">
+                    <select
+                      name="status"
+                      onchange="this.form.submit()"
+                      <%= order.status === 'completed' ? 'disabled' : '' %>
+                    >
+                      <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>
+                        Pending
+                      </option>
+                      <option value="processing" <%= order.status === 'processing' ? 'selected' : '' %>>
+                        Processing
+                      </option>
+                      <option value="completed" <%= order.status === 'completed' ? 'selected' : '' %>>
+                        Completed
+                      </option>
+                      <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>
+                        Cancelled
+                      </option>
+                    </select>
+                  </form>
+                </td>
 
-  
-  <div class="page-header">
-    <h2>All Orders</h2>
-    <button class="btn btn-primary" onclick="openCreateOrderModal()">+ Create Order</button>
-  </div>
+                <td><%= order.issued_by_name || '—' %></td>
+                <td><%= new Date(order.created_at).toLocaleDateString() %></td>
+                <td>
+                  <button class="btn btn-sm" onclick="window.location.href='/orders/admin/<%= order.id %>'">
+                    View
+                  </button>
+
+                  <% if (order.status === 'pending') { %>
+                    <button class="btn btn-sm" onclick="editOrder(<%= order.id %>)">
+                      Edit Items
+                    </button>
+                  <% } %>
+
+                  <button
+                    class="btn btn-danger btn-sm"
+                    onclick="openDeleteOrderModal(<%= order.id %>, 'Order #<%= order.order_number %>')">
+                    Delete
+                  </button>
 
 
-  <table class="table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Customer</th>
-        <th>Total</th>
-        <th>Status</th>
-        <th>Date</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% orders.forEach(order => { %>
-        <tr>
-          <td><%= order.id %></td>
-          <td><%= order.user_id ? order.customer_name : order.customer_name %></td>
-          <td>₦<%= order.total_amount || '—' %></td>
-          <td><%= order.status %></td>
-          <td><%= new Date(order.created_at).toLocaleDateString() %></td>
-          <td>
-            <!-- <button class="btn btn-sm" onclick="openOrderDetails(<%= order.id %>)">View</button> -->
-            <button class="btn btn-sm" onclick="window.location.href='/orders/admin/<%= order.id %>'">
-              View
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      
+
+
+      <div class="modal" id="createOrderModal">
+        <div class="modal-box">
+          <span class="close" onclick="closeModal('createOrderModal')">&times;</span>
+
+          <h3>Create Order</h3>
+
+          <form method="POST" action="/orders/admin/create">
+
+
+            <label>Customer</label>
+          
+            <label>Customer</label>
+
+            <div class="customer-search">
+              <input
+                type="text"
+                id="customerSearch"
+                placeholder="Search customer by name"
+                autocomplete="off"
+              />
+              <input type="hidden" name="customer_name" id="selectedCustomerName">
+              <input type="hidden" name="user_id" id="selectedUserId">
+
+              <div id="customerResults" class="search-results"></div>
+            </div>
+
+            <button type="button" class="btn btn-sm" onclick="enableManualCustomer()">
+              + Manual Entry
             </button>
 
-          </td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+            <div id="manualCustomer" style="display:none; margin-top:10px;">
+              <input type="text" name="manual_customer_name" placeholder="Full Name">
+              <input type="text" name="customer_phone" placeholder="Phone Number">
+            </div>
+
+            <div id="existingCustomerPhone" style="display:none;">
+              <input type="text" id="existingPhone" name="customer_phone" placeholder="Phone Number">
+            </div>
+
+            <label>Delivery Address</label>
+            <textarea name="address" required></textarea>
+
+        
+            <label>Order Items</label>
+            <div id="orderItems">
+              <div class="item-row">
+                <input type="text" class="product-search" placeholder="Search product" required>
+                <div class="search-results"></div>
+                <input type="hidden" name="items[0][product_id]">
+                <input type="number" name="items[0][quantity]" placeholder="Qty" required>
+                <input type="number" name="items[0][price]" placeholder="Price" readonly required>
+                <input type="text" class="item-total" placeholder="Total" readonly>
+                
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-sm" onclick="addItemRow()">+ Add Item</button>
+
+            <h4>Total Amount: ₦<span id="orderTotal">0</span></h4>
+            <input type="hidden" name="total_amount" id="totalAmountInput">
 
 
-  <div class="modal" id="createOrderModal">
-    <div class="modal-box">
-      <span class="close" onclick="closeModal('createOrderModal')">&times;</span>
-
-      <h3>Create Order</h3>
-
-      <form method="POST" action="/orders/admin/create">
-
-
-        <label>Customer</label>
-       
-        <label>Customer</label>
-
-        <div class="customer-search">
-          <input
-            type="text"
-            id="customerSearch"
-            placeholder="Search customer by name"
-            autocomplete="off"
-          />
-          <input type="hidden" name="customer_name" id="selectedCustomerName">
-          <input type="hidden" name="user_id" id="selectedUserId">
-
-          <div id="customerResults" class="search-results"></div>
+            <br><br>
+            <button type="submit" class="btn btn-success">Create Order</button>
+          </form>
         </div>
+      </div>
 
-        <button type="button" class="btn btn-sm" onclick="enableManualCustomer()">
-          + Manual Entry
-        </button>
-
-        <div id="manualCustomer" style="display:none; margin-top:10px;">
-          <input type="text" name="manual_customer_name" placeholder="Full Name">
-          <input type="text" name="customer_phone" placeholder="Phone Number">
+      <div class="modal">
+        <div class="modal-box">
+          <% orders.forEach(order => { %>
+            <form method="POST" action="/orders/admin/<%= order.id %>/update">
+              <select name="status" onchange="this.form.submit()">
+                <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                <option value="processing" <%= order.status === 'processing' ? 'selected' : '' %>>Processing</option>
+                <option value="completed" <%= order.status === 'completed' ? 'selected' : '' %>>Completed</option>
+                <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+              </select>
+            </form>
+          <% }) %>
         </div>
+      </div>
 
-        <div id="existingCustomerPhone" style="display:none;">
-          <input type="text" id="existingPhone" name="customer_phone" placeholder="Phone Number">
-        </div>
+      <div class="modal" id="editOrderModal">
+        <div class="modal-box">
+          <span class="close" onclick="closeModal('editOrderModal')">&times;</span>
 
-        <label>Delivery Address</label>
-        <textarea name="address" required></textarea>
-
-     
-        <label>Order Items</label>
-        <div id="orderItems">
-          <div class="item-row">
-            <input type="text" class="product-search" placeholder="Search product" required>
-            <div class="search-results"></div>
-            <input type="hidden" name="items[0][product_id]">
-            <input type="number" name="items[0][quantity]" placeholder="Qty" required>
-            <input type="number" name="items[0][price]" placeholder="Price" readonly required>
-            <input type="text" class="item-total" placeholder="Total" readonly>
+          <h3>Edit Order</h3>
+          <!-- 🔥 FORM MUST WRAP EVERYTHING -->
+          <form id="editOrderForm" method="POST">
             
-          </div>
+            <div id="editOrderItems"></div>
+
+            <button type="button" class="btn btn-sm" onclick="addEditItemRow()">
+              + Add Item
+            </button>
+
+            <h4>Total Amount: ₦<span id="editOrderTotal">0</span></h4>
+            <input type="hidden" name="total_amount" id="editTotalAmount">
+
+            <br>
+            <button type="submit" class="btn btn-success">
+              Save Changes
+            </button>
+
+          </form>
         </div>
-
-        <button type="button" class="btn btn-sm" onclick="addItemRow()">+ Add Item</button>
-
-        <h4>Total Amount: ₦<span id="orderTotal">0</span></h4>
-        <input type="hidden" name="total_amount" id="totalAmountInput">
+      </div>
 
 
-        <br><br>
-        <button type="submit" class="btn btn-success">Create Order</button>
-      </form>
+      <div id="deleteOrderModal" class="modal">
+        <div class="modal-box center small">
+          <span class="close" onclick="closeDeleteOrderModal()">&times;</span>
+
+          <h3>Delete Order</h3>
+          <p>
+            Are you sure you want to delete
+            <strong id="deleteOrderName"></strong>?
+          </p>
+
+          <form id="deleteOrderForm" method="POST">
+            <button type="button" class="btn btn-secondary" onclick="closeDeleteOrderModal()">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-danger">
+              Yes, Delete
+            </button>
+          </form>
+        </div>
+      </div>
+
+    
+      <div class="modal" id="orderDetailsModal">
+        <div class="modal-box">
+          <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+          <div id="orderDetailsContent">Loading...</div>
+        </div>
+      </div>
+
     </div>
   </div>
-
- 
-  <div class="modal" id="orderDetailsModal">
-    <div class="modal-box">
-      <!-- <span class="close" onclick="closeModal('orderDetailsModal')">&times;</span> -->
-       <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
-      <div id="orderDetailsContent">Loading...</div>
-    </div>
-  </div>
-
+   
 </div>
+
 
 <script>
   const users = <%- JSON.stringify(users) %>;
@@ -130,150 +233,247 @@
 
 
 <script>
-function openOrderDetails(orderId) {
-  fetch(`/orders/admin/${orderId}`)
-    .then(res => res.text())
-    .then(html => {
-      document.getElementById('orderDetailsContent').innerHTML = html;
-      document.getElementById('orderDetailsModal').style.display = 'flex';
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Failed to load order details");
-    });
-}
+function editOrder(orderId) {
+  const modal = document.getElementById('editOrderModal');
+  const container = document.getElementById('editOrderItems');
+  const form = document.getElementById('editOrderForm');
 
+  form.action = `/orders/admin/${orderId}/items/update`;
+  modal.style.display = 'flex';
+  container.innerHTML = '';
 
-function updateOrderTotal() {
-  let total = 0;
+  fetch(`/orders/admin/${orderId}/items`)
+    .then(res => res.json())
+    .then(data => {
+      let total = 0;
 
-  document.querySelectorAll('.item-total').forEach(input => {
-    total += Number(input.value) || 0;
-  });
+      data.items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
 
-  document.getElementById('orderTotal').textContent = total;
-  document.getElementById('totalAmountInput').value = total;
-}
+        row.innerHTML = `
+          <input type="text" class="product-search" value="${item.product_name}" required>
+          <div class="search-results"></div>
 
-function updateItemTotal(row) {
-  const qty = row.querySelector('input[name*="[quantity]"]');
-  const price = row.querySelector('input[name*="[price]"]');
-  const total = row.querySelector('.item-total');
+          <input type="hidden" name="items[${index}][id]" value="${item.id}">
+          <input type="hidden" name="items[${index}][product_id]" value="${item.product_id}">
 
-  function calculate() {
-    const q = Number(qty.value) || 0;
-    const p = Number(price.value) || 0;
-    total.value = q * p;
-    updateOrderTotal();
-  }
+          <input type="number" name="items[${index}][quantity]" value="${item.quantity}" required>
+          <input type="number" name="items[${index}][price]" value="${item.price}" required>
 
-  qty.addEventListener('input', calculate);
-  price.addEventListener('input', calculate);
-}
+          <input type="text" class="item-total" readonly>
 
-function setupProductSearch(input) {
-  const row = input.closest('.item-row');
-  const resultsDiv = row.querySelector('.search-results');
-  const hiddenInput = row.querySelector('input[type="hidden"]');
-  const priceInput = row.querySelector('input[name*="[price]"]');
+          <button type="button" onclick="this.parentElement.remove(); updateEditOrderTotal()">
+            Remove
+          </button>
+        `;
 
-  input.addEventListener('input', () => {
-    const query = input.value.toLowerCase().trim();
-    resultsDiv.innerHTML = '';
+        container.appendChild(row);
 
-    if (!query) return;
+        setupProductSearch(row.querySelector('.product-search'));
+        updateEditItemTotal(row);
 
-    const matched = products.filter(p => p.name.toLowerCase().includes(query)).slice(0, 10);
-
-    matched.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'search-result';
-      div.textContent = `${p.name} (₦${p.price})`;
-
-      div.addEventListener('click', () => {
-        input.value = p.name;
-        hiddenInput.value = p.id;
-        priceInput.value = p.price;
-        resultsDiv.innerHTML = '';
-
-        // updateItemTotal(row); 
-        // updateOrderTotal();   
+        const itemTotal = item.quantity * item.price;
+        row.querySelector('.item-total').value = itemTotal;
+        total += itemTotal;
       });
 
-      resultsDiv.appendChild(div);
+      document.getElementById('editOrderTotal').innerText = total;
+      document.getElementById('editTotalAmount').value = total;
     });
-  });
+}
 
-  // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-    if (!row.contains(e.target) && !resultsDiv.contains(e.target)) {
-      resultsDiv.innerHTML = '';
+  function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+  }
+  function addEditItemRow() {
+    const container = document.getElementById('editOrderItems');
+    const index = container.children.length;
+
+    const row = document.createElement('div');
+    row.className = 'item-row';
+
+    row.innerHTML = `
+      <input type="text" class="product-search" placeholder="Search product" required>
+      <div class="search-results"></div>
+
+      <input type="hidden" name="items[${index}][product_id]">
+      <input type="number" name="items[${index}][quantity]" placeholder="Qty" required>
+      <input type="number" name="items[${index}][price]" placeholder="Price" required>
+
+      <input type="text" class="item-total" readonly>
+
+      <button type="button" onclick="this.parentElement.remove(); updateEditOrderTotal()">
+        Remove
+      </button>
+    `;
+
+    container.appendChild(row);
+
+    setupProductSearch(row.querySelector('.product-search'));
+    updateEditItemTotal(row);
+  }
+
+  function updateEditOrderTotal() {
+    let total = 0;
+
+    document.querySelectorAll('#editOrderItems .item-total').forEach(input => {
+      total += Number(input.value) || 0;
+    });
+
+    document.getElementById('editOrderTotal').innerText = total;
+    document.getElementById('editTotalAmount').value = total;
+  }
+
+  function updateEditItemTotal(row) {
+    const qty = row.querySelector('input[name*="[quantity]"]');
+    const price = row.querySelector('input[name*="[price]"]');
+    const total = row.querySelector('.item-total');
+
+    function calculate() {
+      const q = Number(qty.value) || 0;
+      const p = Number(price.value) || 0;
+      total.value = q * p;
+      updateEditOrderTotal();
     }
-  });
-}
 
-function openCreateOrderModal() {
-  document.getElementById('createOrderModal').style.display = 'flex';
+    qty.addEventListener('input', calculate);
+    price.addEventListener('input', calculate);
+  }
 
-  document.querySelectorAll('.product-search').forEach(input => {
-    setupProductSearch(input);
-    updateItemTotal(input.closest('.item-row')); // ✅ now valid
-  });
+  function openDeleteOrderModal(id, label) {
+    const deleteModal = document.getElementById("deleteOrderModal");
+    document.getElementById('deleteOrderModal').style.display = 'flex';
+    // deleteModal.classList.add("active");
 
-  setupCustomerSearch();
-}
+    document.getElementById("deleteOrderName").textContent = `Order #${id}`;
+    document.getElementById("deleteOrderForm").action =
+      `/orders/admin/${id}/delete`;
+  }
+
+  function closeDeleteOrderModal() {
+    // document.getElementById("deleteOrderModal").classList.remove("active");
+    document.getElementById('deleteOrderModal').style.display = 'none';
+  }
+
+  function openOrderDetails(orderId) {
+    fetch(`/orders/admin/${orderId}`)
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('orderDetailsContent').innerHTML = html;
+        document.getElementById('orderDetailsModal').style.display = 'flex';
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Failed to load order details");
+      });
+  }
 
 
+  function updateOrderTotal() {
+    let total = 0;
 
-// Add new item row
-// function addItemRow() {
-//   const container = document.getElementById('orderItems');
-//   const index = container.children.length;
+    document.querySelectorAll('.item-total').forEach(input => {
+      total += Number(input.value) || 0;
+    });
 
-//   const div = document.createElement('div');
-//   div.className = 'item-row';
-//   div.innerHTML = `
-//     <input type="text" class="product-search" placeholder="Search product" required>
-//     <input type="hidden" name="items[${index}][product_id]">
-//     <input type="number" name="items[${index}][quantity]" placeholder="Qty" required>
-//     <input type="number" name="items[${index}][price]" placeholder="Price" readonly required>
-//     <div class="search-results"></div>
-//     <button type="button" onclick="this.parentElement.remove()">Remove</button>
-//   `;
+    document.getElementById('orderTotal').textContent = total;
+    document.getElementById('totalAmountInput').value = total;
+  }
 
-//   container.appendChild(div);
+  function updateItemTotal(row) {
+    const qty = row.querySelector('input[name*="[quantity]"]');
+    const price = row.querySelector('input[name*="[price]"]');
+    const total = row.querySelector('.item-total');
 
-//   // Setup search for the new row
-//   setupProductSearch(div.querySelector('.product-search'));
-//   updateItemTotal(div); // 🔥 VERY IMPORTANT
+    function calculate() {
+      const q = Number(qty.value) || 0;
+      const p = Number(price.value) || 0;
+      total.value = q * p;
+      updateOrderTotal();
+    }
 
-// }
+    qty.addEventListener('input', calculate);
+    price.addEventListener('input', calculate);
+  }
 
-function addItemRow() {
-  const container = document.getElementById('orderItems');
-  const index = container.children.length;
+  function setupProductSearch(input) {
+    const row = input.closest('.item-row');
+    const resultsDiv = row.querySelector('.search-results');
+    const hiddenInput = row.querySelector('input[type="hidden"]');
+    const priceInput = row.querySelector('input[name*="[price]"]');
 
-  const div = document.createElement('div');
-  div.className = 'item-row';
-  div.innerHTML = `
-    <input type="text" class="product-search" placeholder="Search product" required>
-    <div class="search-results"></div>
+    input.addEventListener('input', () => {
+      const query = input.value.toLowerCase().trim();
+      resultsDiv.innerHTML = '';
 
-    <input type="hidden" name="items[${index}][product_id]">
-    <input type="number" name="items[${index}][quantity]" placeholder="Qty" required>
-    <input type="number" name="items[${index}][price]" placeholder="Price" readonly required>
+      if (!query) return;
 
-    <!-- 🔥 MISSING TOTAL FIELD (NOW FIXED) -->
-    <input type="text" class="item-total" placeholder="Total" readonly>
+      const matched = products.filter(p => p.name.toLowerCase().includes(query)).slice(0, 10);
 
-    <button type="button" onclick="this.parentElement.remove(); updateOrderTotal()">Remove</button>
-  `;
+      matched.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'search-result';
+        div.textContent = `${p.name} (₦${p.price})`;
 
-  container.appendChild(div);
+        div.addEventListener('click', () => {
+          input.value = p.name;
+          hiddenInput.value = p.id;
+          priceInput.value = p.price;
+          resultsDiv.innerHTML = '';
 
-  setupProductSearch(div.querySelector('.product-search'));
-  updateItemTotal(div); // 🔥 attach calculation logic
-}
+          // updateItemTotal(row); 
+          // updateOrderTotal();   
+        });
+
+        resultsDiv.appendChild(div);
+      });
+    });
+
+    // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+      if (!row.contains(e.target) && !resultsDiv.contains(e.target)) {
+        resultsDiv.innerHTML = '';
+      }
+    });
+  }
+
+  function openCreateOrderModal() {
+    document.getElementById('createOrderModal').style.display = 'flex';
+
+    document.querySelectorAll('.product-search').forEach(input => {
+      setupProductSearch(input);
+      updateItemTotal(input.closest('.item-row')); // ✅ now valid
+    });
+
+    setupCustomerSearch();
+  }
+
+  function addItemRow() {
+    const container = document.getElementById('orderItems');
+    const index = container.children.length;
+
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.innerHTML = `
+      <input type="text" class="product-search" placeholder="Search product" required>
+      <div class="search-results"></div>
+
+      <input type="hidden" name="items[${index}][product_id]">
+      <input type="number" name="items[${index}][quantity]" placeholder="Qty" required>
+      <input type="number" name="items[${index}][price]" placeholder="Price" readonly required>
+
+      <!-- 🔥 MISSING TOTAL FIELD (NOW FIXED) -->
+      <input type="text" class="item-total" placeholder="Total" readonly>
+
+      <button type="button" onclick="this.parentElement.remove(); updateOrderTotal()">Remove</button>
+    `;
+
+    container.appendChild(div);
+
+    setupProductSearch(div.querySelector('.product-search'));
+    updateItemTotal(div); // 🔥 attach calculation logic
+  }
 
 </script>
 

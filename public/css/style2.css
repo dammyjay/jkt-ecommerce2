@@ -944,6 +944,7 @@ select:focus {
   padding: var(--s-md);
   box-shadow: var(--shadow-sm);
   transition: box-shadow .25s;
+  margin-top: 10px;
 }
 
 .card:hover {

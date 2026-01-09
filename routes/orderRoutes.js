@@ -16,6 +16,26 @@ router.post(
   isAdmin,
   orderController.adminCreateOrder
 );
+
+router.get(
+  '/orders/admin/:id/edit-data',
+  orderController.getOrderForEdit
+);  
+
+router.get(
+  "/admin/:id/items",
+  isAuthenticated,
+  isAdmin,
+  orderController.getOrderItems
+);
+
+router.post(
+  "/admin/:id/items/update",
+  isAuthenticated,
+  isAdmin,
+  orderController.updateOrderItems
+);
+
 router.post("/admin/:id/update", isAdmin, orderController.updateOrderStatus);
 router.post("/admin/:id/delete", isAdmin, orderController.deleteOrder);
 router.get(

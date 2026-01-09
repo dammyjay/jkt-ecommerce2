@@ -1,26 +1,32 @@
-<h3>Order #<%= order.id %></h3>
-<p><strong>Customer:</strong> <%= order.fullname %></p>
-<p><strong>Status:</strong> <%= order.status %></p>
+<div class="container">
+  <div class="card">
+      <h3 style="color: #6f520c;"><%= order.order_number %></h3>
+      <p><strong>Customer:</strong> <%= order.fullname %></p>
+      <p><strong>Status:</strong> <%= order.status %></p>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Item</th>
-      <th>Qty</th>
-      <th>Price</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% items.forEach(item => { %>
-      <tr>
-        <td><%= item.name %></td>
-        <td><%= item.quantity %></td>
-        <td>₦<%= item.price %></td>
-      </tr>
-    <% }) %>
-  </tbody>
-</table>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach(item => { %>
+            <tr>
+              <td><%= item.name %></td>
+              <td><%= item.quantity %></td>
+              <td>₦<%= item.price %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
 
-<a href="/invoice/<%= order.id %>" class="btn btn-secondary">
-  Download Invoice
-</a>
+      <a href="/invoice/<%= order.id %>" class="btn btn-secondary">
+        Download Invoice
+      </a>
+
+    </div>
+
+</div>

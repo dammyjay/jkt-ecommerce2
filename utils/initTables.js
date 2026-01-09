@@ -52,7 +52,7 @@ async function initTables() {
       -- ORDERS TABLE
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
-        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        user_id INT REFERENCES users2(id) ON DELETE CASCADE,
         total_amount NUMERIC(10,2),
         status VARCHAR(50) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -74,7 +74,14 @@ async function initTables() {
       ALTER TABLE orders
       ALTER COLUMN customer_phone TYPE VARCHAR(30);
 
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS order_number VARCHAR(30) UNIQUE;
 
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT false;
+
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS issued_by INT REFERENCES users2(id);
 
       CREATE TABLE IF NOT EXISTS order_items (
         id SERIAL PRIMARY KEY,
