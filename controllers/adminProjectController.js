@@ -273,7 +273,6 @@ exports.getProjects = async (req, res) => {
   res.render("admin/projects/index", { projects: rows });
 };
 
-
 exports.getProjectDetails = async (req, res) => {
   const projectId = parseInt(req.params.id);
 
@@ -303,27 +302,7 @@ exports.getProjectDetails = async (req, res) => {
   });
 };
 
-
 // VIEW BOOKINGS (ADMIN)
-// exports.getBookings = async (req, res) => {
-//   const { rows } = await pool.query(`
-//     SELECT
-//       pb.id,
-//       pb.status,
-//       pb.expected_budget,
-//       pb.timeline,
-//       pb.created_at,
-//       u.fullname,
-//       p.title
-//     FROM project_bookings pb
-//     JOIN users2 u ON u.id = pb.user_id
-//     JOIN projects p ON p.id = pb.project_id
-//     ORDER BY pb.created_at DESC
-//   `);
-
-//   res.render("admin/projects/bookings", { bookings: rows });
-// };
-
 exports.getBookings = async (req, res) => {
   try {
     const { rows } = await pool.query(`
@@ -363,45 +342,6 @@ exports.getBookings = async (req, res) => {
   }
 };
 
-
-// exports.getBookings = async (req, res) => {
-//   try {
-//     const { rows } = await pool.query(`
-//       SELECT 
-//         pb.id,
-//         pb.status,
-//         pb.expected_budget,
-//         pb.timeline,
-//         pb.created_at,
-//         pb.custom_title,
-
-//         u.fullname,
-//         p.title,
-
-//         q.id AS quotation_id,
-//         q.is_locked,
-//         q.quoted_amount,
-//         q.delivery_timeline,
-//         q.quotation_html
-
-//       FROM project_bookings pb
-//       JOIN users2 u ON u.id = pb.user_id
-//       JOIN projects p ON p.id = pb.project_id
-//       LEFT JOIN project_quotations q ON q.booking_id = pb.id
-//       ORDER BY pb.created_at DESC
-//     `);
-
-//     res.render("admin/projects/bookings", {
-//       bookings: rows
-//     });
-
-//   } catch (err) {
-//     console.error("❌ Error fetching project bookings:", err);
-//     res.status(500).send("Failed to load bookings");
-//   }
-// };
-
-
 exports.updateProgress = async (req, res) => {
   const { booking_id, status } = req.body;
 
@@ -413,77 +353,6 @@ exports.updateProgress = async (req, res) => {
   res.redirect("/admin/projects/bookings");
 };
 
-// SEND QUOTATION
-// exports.sendQuotation = async (req, res) => {
-//   const { booking_id, quoted_amount, delivery_timeline } = req.body;
-
-//   let quotationUrl = null;
-
-//   if (req.file) {
-//     // const upload = await cloudinary.uploader.upload(req.file.path, {
-//     //   folder: "JKT-ecommerce/quotations",
-//     //   resource_type: "raw",
-//     // });
-//     const upload = await cloudinary.uploader.upload(req.file.path, {
-//       folder: "JKT-ecommerce/quotations",
-//       resource_type: "raw",
-//       public_id: `quotation_${booking_id}.pdf`,
-//       type: "upload",        // ✅ REQUIRED
-//       access_mode: "public", // ✅ REQUIRED
-//     });
-
-//     // quotationUrl = upload.secure_url;
-//     quotationUrl = upload.public_id; // 👈 STORE THIS
-//   }
-
-//   await pool.query(
-//     `INSERT INTO project_quotations
-//      (booking_id, quoted_amount, delivery_timeline, quotation_file)
-//      VALUES ($1,$2,$3,$4)`,
-//     [booking_id, quoted_amount, delivery_timeline, quotationUrl]
-//   );
-
-//   await pool.query(
-//     "UPDATE project_bookings SET status='quoted' WHERE id=$1",
-//     [booking_id]
-//   );
-
-//   const userRes = await pool.query(
-//     `
-//     SELECT 
-//       u.email,
-//       u.fullname,
-//       p.title AS project_title
-//     FROM project_bookings pb
-//     JOIN users2 u ON u.id = pb.user_id
-//     JOIN projects p ON p.id = pb.project_id
-//     WHERE pb.id = $1
-//     `,
-//     [booking_id]
-//   );
-
-//   if (userRes.rows.length === 0) {
-//     console.error("❌ No user found for booking:", booking_id);
-//     return res.redirect("/admin/projects/bookings");
-//   }
-
-//   const user = userRes.rows[0];
-
-//   await sendEmail({
-//     to: user.email,
-//     subject: `Quotation for ${user.project_title}`,
-//     html: quotationTemplate({
-//       fullname: user.fullname,
-//       project_title: user.project_title,
-//       amount: quoted_amount,
-//       timeline: delivery_timeline,
-//       company_name: "JKT Technologies",
-//     }).html,
-//   });
-
-//   res.redirect("/admin/projects/bookings");
-// };
-   
 exports.sendQuotation = async (req, res) => {
   const { booking_id, quoted_amount, delivery_timeline, quotation_html } = req.body;
 
@@ -601,61 +470,6 @@ exports.sendQuotation = async (req, res) => {
   res.redirect("/admin/projects/bookings");
 };
 
-
-
-// exports.sendQuotation = async (req, res) => {
-//   const { booking_id, quoted_amount, delivery_timeline, quotation_html } = req.body;
-
-//   await pool.query(
-//     `INSERT INTO project_quotations
-//      (booking_id, quoted_amount, delivery_timeline, quotation_html)
-//      VALUES ($1,$2,$3,$4)`,
-//     [booking_id, quoted_amount, delivery_timeline, quotation_html]
-//   );
-
-//   await pool.query(
-//     "UPDATE project_bookings SET status='quoted' WHERE id=$1",
-//     [booking_id]
-//   );
-
-//   const userRes = await pool.query(
-//     `
-//     SELECT 
-//       u.email,
-//       u.fullname,
-//       p.title AS project_title
-//     FROM project_bookings pb
-//     JOIN users2 u ON u.id = pb.user_id
-//     JOIN projects p ON p.id = pb.project_id
-//     WHERE pb.id = $1
-//     `,
-//     [booking_id]
-//   );
-
-//   if (userRes.rows.length === 0) {
-//     console.error("❌ No user found for booking:", booking_id);
-//     return res.redirect("/admin/projects/bookings");
-//   }
-
-//   const user = userRes.rows[0];
-
-//   await sendEmail({
-//     to: user.email,
-//     subject: `Quotation for ${user.project_title}`,
-//     html: quotationTemplate({
-//       fullname: user.fullname,
-//       project_title: user.project_title,
-//       amount: quoted_amount,
-//       timeline: delivery_timeline,
-//       company_name: "JKT Technologies",
-//     }).html,
-//   });
-
-//   res.redirect("/admin/projects/bookings");
-// };
-
-
-// controllers/adminProjectController.js
 exports.createMilestone = async (req, res) => {
   const { booking_id, title, amount } = req.body;
   await pool.query(

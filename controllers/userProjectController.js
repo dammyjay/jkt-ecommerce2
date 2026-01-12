@@ -3,6 +3,7 @@ const cloudinary = require("../utils/cloudinary");
 const html_to_pdf = require("html-pdf-node");
 const puppeteer = require("puppeteer");
 
+
 // LIST PROJECTS
 exports.listProjects = async (req, res) => {
   const { rows } = await pool.query(
@@ -176,72 +177,6 @@ exports.viewQuotation = async (req, res) => {
   });
 };
 
-
-// exports.downloadQuotation = async (req, res) => {
-//   try {
-//     const bookingId = req.params.id;
-//     const userId = req.session.user.id;
-
-//     const result = await pool.query(
-//       `
-//       SELECT q.quotation_html,
-//              COALESCE(p.title, pb.custom_title) AS title
-//       FROM project_quotations q
-//       JOIN project_bookings pb ON pb.id = q.booking_id
-//       LEFT JOIN projects p ON p.id = pb.project_id
-//       WHERE pb.id = $1 AND pb.user_id = $2
-//       `,
-//       [bookingId, userId]
-//     );
-
-//     if (result.rows.length === 0) {
-//       return res.status(403).send("Access denied");
-//     }
-
-//     const quotation = result.rows[0];
-
-//     const html = `
-//       <!DOCTYPE html>
-//       <html>
-//         <head>
-//           <meta charset="UTF-8" />
-//           <style>
-//             body { font-family: Arial; padding: 40px; }
-//           </style>
-//         </head>
-//         <body>
-//           <h2>${quotation.title} – Project Quotation</h2>
-//           ${quotation.quotation_html}
-//         </body>
-//       </html>
-//     `;
-
-//     const browser = await puppeteer.launch({
-//       headless: "new",
-//       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-//     });
-
-//     const page = await browser.newPage();
-//     await page.setContent(html, { waitUntil: "networkidle0" });
-
-//     const pdfBuffer = await page.pdf({
-//       format: "A4",
-//       printBackground: true,
-//     });
-
-//     await browser.close();
-
-//     res.set({
-//       "Content-Type": "application/pdf",
-//       "Content-Disposition": `attachment; filename="${quotation.title} documentation.pdf"`,
-//     });
-
-//     res.send(pdfBuffer);
-//   } catch (err) {
-//     console.error("PDF generation error:", err);
-//     res.status(500).send("Failed to generate PDF");
-//   }
-// };
 
 exports.downloadQuotation = async (req, res) => {
   try {

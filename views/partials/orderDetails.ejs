@@ -1,4 +1,4 @@
-<div class="container">
+<!-- <div class="container">
   <div class="card">
       <h3 style="color: #6f520c;"><%= order.order_number %></h3>
       <p><strong>Customer:</strong> <%= order.fullname %></p>
@@ -29,4 +29,69 @@
 
     </div>
 
+</div> -->
+
+
+<%
+  const TAX_RATE = 0.075;
+  let subTotal = 0;
+  let totalTax = 0;
+%>
+
+<div class="container">
+  <div class="card">
+    <h3 style="color: #6f520c;"><%= order.order_number %></h3>
+    <p><strong>Customer:</strong> <%= order.customer_name || order.fullname %></p>
+    <p><strong>Status:</strong> <%= order.status %></p>
+    <p><strong>Issued by:</strong> <%= order.issued_by_name %></p>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Tax 7.5%</th>
+          <th>Unit total</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach(item => { 
+          const eachTax = item.price * TAX_RATE;
+          const eachPriceWithoutTax = item.price - eachTax;
+          const quantity = item.quantity;
+          const priceWithoutTaxTotal = eachPriceWithoutTax * quantity;
+          const itemTotal = item.quantity * item.price;
+          <!-- const itemTotal = item.price; -->
+          const itemTax = itemTotal * TAX_RATE;
+          subTotal += priceWithoutTaxTotal;
+          <!-- subTotal += itemTotal; -->
+          totalTax += itemTax;
+        %>
+          <tr>
+            <td><%= item.name %></td>
+            <td><%= item.quantity %></td>
+            <td>₦<%= item.price - eachTax %></td>
+            <!-- <td>₦<%= item.price %></td> -->
+            <!-- <td>₦<%= itemTax %></td> -->
+            <td>₦<%= eachTax %></td>
+            <!-- <td>₦<%= (itemTotal + itemTax) %></td> -->
+            <td>₦<%= (item.price) %></td>
+             <td>₦<%= itemTotal %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <p><strong>Subtotal:</strong> ₦<%= subTotal.toFixed(2) %></p>
+    <p><strong>Total Tax:</strong> ₦<%= totalTax.toFixed(2) %></p>
+    <h4><strong>Grand Total:</strong> ₦<%= (subTotal + totalTax).toFixed(2) %></h4>
+
+    <a href="/orders/invoice/<%= order.id %>" class="btn btn-secondary">
+      Download Invoice
+    </a>
+  </div>
 </div>

@@ -45,4 +45,7 @@ router.get(
   orderController.getOrderDetailsModal
 );
 
+router.get('/invoice/:id', isAdmin, orderController.downloadInvoice);
+
+
 module.exports = router;

@@ -1,4 +1,12 @@
 const pool = require("../utils/db");
+// const path = require('path');
+// const fs = require('fs');
+// const ejs = require('ejs');
+// const pdf = require('html-pdf');
+const puppeteer = require("puppeteer");
+const html_to_pdf = require("html-pdf-node");
+
+
 // ✅ User: Place order
 exports.placeOrder = async (req, res) => {
   try {
@@ -256,9 +264,11 @@ exports.getOrderDetailsModal = async (req, res) => {
       `
       SELECT 
         o.*,
-        COALESCE(u.fullname, o.customer_name) AS customer_name
+        COALESCE(u.fullname, o.customer_name) AS customer_name,
+        a.fullname AS issued_by_name
       FROM orders o
       LEFT JOIN users2 u ON o.user_id = u.id
+      LEFT JOIN users2 a ON o.issued_by = a.id
       WHERE o.id = $1
       `,
       [orderId]
@@ -333,3 +343,254 @@ exports.updateOrderItems = async (req, res) => {
     res.status(500).json({ error: "Failed to update order items" });
   }
 };
+
+
+exports.downloadInvoice = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    const orderResult = await pool.query(
+      `
+      SELECT o.*, 
+             COALESCE(u.fullname, o.customer_name) AS customer_name,
+             a.fullname AS issued_by_name
+      FROM orders o
+      LEFT JOIN users2 u ON u.id = o.user_id
+      LEFT JOIN users2 a ON o.issued_by = a.id
+      WHERE o.id = $1 AND o.deleted = false
+      `,
+      [orderId]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).send("Order not found");
+    }
+
+    const itemsResult = await pool.query(
+      `
+      SELECT oi.quantity, oi.price, p.name
+      FROM order_items oi
+      JOIN products p ON p.id = oi.product_id
+      WHERE oi.order_id = $1
+      `,
+      [orderId]
+    );
+
+    const order = orderResult.rows[0];
+    const items = itemsResult.rows;
+
+    const TAX_RATE = 0.075;
+
+    let subTotal = 0;
+    let totalTax = 0;
+
+    items.forEach(item => {
+      // const itemTotal = item.quantity * item.price;
+      // const itemTax = itemTotal * TAX_RATE;
+      // subTotal += itemTotal;
+      // totalTax += itemTax;
+
+      const eachTax = item.price * TAX_RATE;
+          const eachPriceWithoutTax = item.price - eachTax;
+          const quantity = item.quantity;
+          const priceWithoutTaxTotal = eachPriceWithoutTax * quantity;
+          const itemTotal = item.quantity * item.price;
+          const itemTax = itemTotal * TAX_RATE;
+          subTotal += priceWithoutTaxTotal;
+          totalTax += itemTax;
+    });
+
+    const grandTotal = subTotal + totalTax;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          body {
+            font-family: Calibri, sans-serif;
+            padding: 40px;
+          }
+
+          .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.06;
+            z-index: 0;
+            text-align: center;
+          }
+
+          .watermark img {
+            width: 300px;
+          }
+
+          .content {
+            position: relative;
+            z-index: 2;
+          }
+          
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          
+          td {
+            padding: 8px;
+            text-align: left;
+          }
+
+          th {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+          }
+
+          th {
+            background: #000000;
+            color: #ffffff;
+          }
+
+          .totals {
+            margin-top: 20px;
+            text-align: right;
+          }
+
+          .totals p {
+            margin: 5px 0;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="watermark">
+          <img src="https://shopify.jkthub.com/images/JKT logo.png" />
+        </div>
+
+        <div class="content">
+          <img src="https://shopify.jkthub.com/images/JKT logo.png" alt="JKT Logo" width="60" height="60" />
+          <h1 style="color: #6f520c;">JKT Hub Shopify</h1>
+          <p>123 E-Commerce St., Lagos, Nigeria<br />
+          <strong>Email:</strong> jaykirchtechhub@gmail.com<br />
+          <strong>Phone:</strong> +234 916 766 7242</p>
+
+          <h2 style="color: #6f520c;">Invoice</h2>
+          <p><strong style="color: #6f520c;">Order No:</strong> ${order.order_number}</p>
+          <p><strong style="color: #6f520c;">Customer:</strong> ${order.customer_name}</p>
+          <p><strong style="color: #6f520c;">Phone:</strong> ${order.customer_phone || "N/A"}</p>
+          <p><strong style="color: #6f520c;">Address:</strong> ${order.address || "N/A"}</p>
+          <p><strong style="color: #6f520c;">Issued by:</strong> ${order.issued_by_name}</p>
+          <p><strong style="color: #6f520c;">Date:</strong> ${new Date(order.created_at).toDateString()}</p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Tax 7.5%</th>
+                <th>Unit total</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => {
+                const eachItemTotal = item.quantity * item.price;
+                const itemTotal = item.price;
+                const itemTax = itemTotal * TAX_RATE;
+
+                return `
+                  <tr>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>₦${item.price - itemTax}</td>
+                    <td>₦${itemTax}</td>
+                    <td>₦${itemTotal}</td>
+                    <td>₦${(eachItemTotal)}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <p><strong style="color: #6f520c;">Subtotal:</strong> ₦${subTotal.toFixed(2)}</p>
+            <p><strong style="color: #6f520c;">Tax:</strong> ₦${totalTax.toFixed(2)}</p>
+            <h3><strong style="color: #6f520c;">Grand Total:</strong> ₦${grandTotal.toFixed(2)}</h3>
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
+
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+    });
+
+    await browser.close();
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="invoice-${order.order_number}.pdf"`,
+    });
+
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error("Invoice PDF error:", err);
+    res.status(500).send("Failed to generate invoice");
+  }
+};
+
+
+// exports.downloadInvoice = async (req, res) => {
+//   const { id } = req.params;
+
+//   const orderResult = await pool.query(`
+//     SELECT o.*, u.fullname
+//     FROM orders o
+//     LEFT JOIN users u ON u.id = o.user_id
+//     WHERE o.id = $1
+//   `, [id]);
+
+//   const itemsResult = await pool.query(`
+//     SELECT oi.quantity, oi.price, p.name
+//     FROM order_items oi
+//     JOIN products p ON p.id = oi.product_id
+//     WHERE oi.order_id = $1
+//   `, [id]);
+
+//   const order = orderResult.rows[0];
+//   const items = itemsResult.rows;
+
+//   const html = await ejs.renderFile(
+//     path.join(__dirname, '../views/invoice.ejs'),
+//     { order, items }
+//   );
+
+//   const options = { format: 'A4' };
+
+//   pdf.create(html, options).toStream((err, stream) => {
+//     if (err) return res.status(500).send('Invoice error');
+
+//     res.setHeader('Content-Type', 'application/pdf');
+//     res.setHeader(
+//       'Content-Disposition',
+//       `attachment; filename=invoice-${order.order_number}.pdf`
+//     );
+
+//     stream.pipe(res);
+//   });
+// };
