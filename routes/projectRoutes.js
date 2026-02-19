@@ -30,6 +30,7 @@ router.get("/dashboard/userProjects", isAuthenticated, user.userProjects);
 
 // Quotation routes
 router.get("/quotation/:id", isAuthenticated, user.viewQuotation);
+// router.get("/quotation/:id", user.viewQuotation);
 router.get("/quotation/download/:id", isAuthenticated, user.downloadQuotation);
 router.post("/quotation/accept/:id", isAuthenticated, user.acceptQuotation);
 

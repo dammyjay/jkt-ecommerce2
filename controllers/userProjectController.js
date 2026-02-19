@@ -157,7 +157,7 @@ exports.viewQuotation = async (req, res) => {
 
   // Check if logged in
   if (!req.session.user) {
-    return res.redirect("/login");
+    return res.redirect("/auth/login");
   }
 
   const userId = req.session.user.id;
@@ -189,7 +189,7 @@ exports.viewQuotation = async (req, res) => {
     return res.status(403).send("Access denied");
   }
 
-  res.render("viewQuotation", {
+  res.render("dashboard/viewQuotation", {
     quotation,
     bookingId
   });
