@@ -45,10 +45,16 @@ router.post(
 router.post('/projects/videos/:id/delete', isAdmin, admin.deleteProjectVideo);
 
 // router.post("/projects/quotation", isAdmin, admin.sendQuotation);
+// router.post(
+//   "/projects/quotation",
+//   isAuthenticated,
+//   isAdmin,
+//   upload.single("quotation"), // 👈 REQUIRED
+//   admin.sendQuotation
+// );
+
 router.post(
   "/projects/quotation",
-  isAuthenticated,
-  isAdmin,
   upload.single("quotation"), // 👈 REQUIRED
   admin.sendQuotation
 );

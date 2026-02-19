@@ -221,7 +221,7 @@ const login = async (req, res) => {
       };
 
       const redirectUrl = req.session.returnTo || "/admin/dashboard";
-      delete req.session.returnTo;
+      // delete req.session.returnTo;
 
       return req.session.save(err => {
         if (err) {
