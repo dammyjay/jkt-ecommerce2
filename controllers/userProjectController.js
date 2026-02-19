@@ -148,31 +148,74 @@ exports.userProjects = async (req, res) => {
 };
 
 
+// exports.viewQuotation = async (req, res) => {
+//   const bookingId = req.params.id;
+//   const userId = req.session.user.id;
+
+//   const result = await pool.query(
+//     `
+//     SELECT
+//       q.*,
+//       pb.status AS booking_status,
+//       COALESCE(p.title, pb.custom_title) AS project_title
+//     FROM project_quotations q
+//     JOIN project_bookings pb ON pb.id = q.booking_id
+//     LEFT JOIN projects p ON p.id = pb.project_id
+//     WHERE pb.id = $1
+//       AND pb.user_id = $2
+//     `,
+//     [bookingId, userId]
+//   );
+
+//   if (result.rows.length === 0) {
+//     return res.status(404).send("Quotation not found");
+//   }
+
+//   res.render("dashboard/viewQuotation", {
+//     quotation: result.rows[0],
+//     bookingId
+//   });
+// };
+
 exports.viewQuotation = async (req, res) => {
   const bookingId = req.params.id;
+
+  // Check if logged in
+  if (!req.session.user) {
+    return res.redirect("/login");
+  }
+
   const userId = req.session.user.id;
+  const userRole = req.session.user.role; // admin or user
 
   const result = await pool.query(
     `
-    SELECT
-      q.*,
+    SELECT 
+      pq.*,
+      pb.user_id,
       pb.status AS booking_status,
-      COALESCE(p.title, pb.custom_title) AS project_title
-    FROM project_quotations q
-    JOIN project_bookings pb ON pb.id = q.booking_id
+      COALESCE(p.title, pb.custom_title) AS title
+    FROM project_quotations pq
+    JOIN project_bookings pb ON pb.id = pq.booking_id
     LEFT JOIN projects p ON p.id = pb.project_id
-    WHERE pb.id = $1
-      AND pb.user_id = $2
+    WHERE pq.booking_id = $1
     `,
-    [bookingId, userId]
+    [bookingId]
   );
 
   if (result.rows.length === 0) {
     return res.status(404).send("Quotation not found");
   }
 
-  res.render("dashboard/viewQuotation", {
-    quotation: result.rows[0],
+  const quotation = result.rows[0];
+
+  // 🔒 SECURITY CHECK
+  if (quotation.user_id !== userId && userRole !== "admin") {
+    return res.status(403).send("Access denied");
+  }
+
+  res.render("viewQuotation", {
+    quotation,
     bookingId
   });
 };

@@ -425,6 +425,7 @@ exports.sendQuotation = async (req, res) => {
 
   const user = userRes.rows[0];
 
+  const viewLink = `${process.env.BASE_URL}/projects/quotation/${booking_id}`;
 
   await sendEmail(
     user.email,
@@ -434,7 +435,8 @@ exports.sendQuotation = async (req, res) => {
       project_title: user.project_title,
       amount: quoted_amount,
       timeline: delivery_timeline,
-      company_name: "JKT Technologies",
+      company_name: "JKT Technologies Hub",
+      view_link: viewLink
     }).html
   );
 
@@ -446,7 +448,9 @@ exports.sendQuotation = async (req, res) => {
       project_title: user.project_title,
       amount: quoted_amount,
       timeline: delivery_timeline,
-      company_name: "JKT Technologies",
+      company_name: "JKT Technologies Hub",
+      view_link: viewLink
+      
     }).html
   );
 

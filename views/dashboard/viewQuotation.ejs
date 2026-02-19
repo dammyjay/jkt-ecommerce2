@@ -1,37 +1,7 @@
 <div class="container">
   <h1>Project Quotation</h1>
 
-  <!-- <div class="card">
-    <h3><%= quotation.title %></h3>
-    <p><%= quotation.description %></p>
-
-    <p><strong>Quoted Amount:</strong> ₦<%= quotation.quoted_amount %></p>
-    <p><strong>Delivery Timeline:</strong> <%= quotation.delivery_timeline %></p>
-
-    <% if (quotation.quotation_file) { %>
-
-        <a 
-          href="/projects/quotation/download/<%= bookingId %>" 
-          class="btn btn-outline-primary"
-        >
-          View / Download PDF
-        </a>
-
-    <% } %>
-
-    <% if (quotation.status === 'quoted') { %>
-      <form 
-        action="/projects/quotation/accept/<%= bookingId %>" 
-        method="POST"
-        style="margin-top:15px;"
-      >
-        <button class="btn btn-success">
-          Accept Quotation
-        </button>
-      </form>
-    <% } %>
-  </div> -->
-  <div class="card">
+ <div class="card">
   <h3><%= quotation.title %></h3>
 
   <div class="quotation-preview">
