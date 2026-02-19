@@ -114,7 +114,6 @@ exports.getDashboard = async (req, res) => {
   }
 };
 
-
 exports.getProfile = async (req, res) => {
   try {
     // Assuming you stored user info in session after login
@@ -231,6 +230,7 @@ exports.editUser = async (req, res) => {
   }
 };
 
+// Show all promotions in admin panel
 exports.createPromotion = [
   upload.single("image"),
   async (req, res) => {
@@ -272,6 +272,7 @@ exports.getTestimonials = async (req, res) => {
     res.status(500).send("Error fetching testimonials");
   }
 };
+
 // Approve testimonial
 exports.approveTestimonial = async (req, res) => {
   try {

@@ -555,7 +555,6 @@ exports.downloadInvoice = async (req, res) => {
 };
 
 
-// exports.downloadInvoice = async (req, res) => {
 //   const { id } = req.params;
 
 //   const orderResult = await pool.query(`

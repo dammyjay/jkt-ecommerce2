@@ -403,20 +403,6 @@ exports.sendQuotation = async (req, res) => {
     [booking_id]
   );
 
-  // 📧 Send / resend email
-  // const userRes = await pool.query(
-  //   `
-  //   SELECT 
-  //     u.email,
-  //     u.fullname,
-  //     p.title AS project_title
-  //   FROM project_bookings pb
-  //   JOIN users2 u ON u.id = pb.user_id
-  //   JOIN projects p ON p.id = pb.project_id
-  //   WHERE pb.id = $1
-  //   `,
-  //   [booking_id]
-  // );
 
   const userRes = await pool.query(
     `
@@ -440,22 +426,20 @@ exports.sendQuotation = async (req, res) => {
   const user = userRes.rows[0];
 
 
-  // const user = userRes.rows[0];
-
-  // await sendEmail({
-  //   to: user.email,
-  //   subject: `Updated Quotation for ${user.project_title}`,
-  //   html: quotationTemplate({
-  //     fullname: user.fullname,
-  //     project_title: user.project_title,
-  //     amount: quoted_amount,
-  //     timeline: delivery_timeline,
-  //     company_name: "JKT Technologies",
-  //   }).html,
-  // });
-
   await sendEmail(
     user.email,
+    `Updated Quotation for ${user.project_title}`,
+    quotationTemplate({
+      fullname: user.fullname,
+      project_title: user.project_title,
+      amount: quoted_amount,
+      timeline: delivery_timeline,
+      company_name: "JKT Technologies",
+    }).html
+  );
+
+  await sendEmail(
+    "jaykirchtechhub@gmail.com",
     `Updated Quotation for ${user.project_title}`,
     quotationTemplate({
       fullname: user.fullname,
