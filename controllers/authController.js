@@ -127,8 +127,27 @@ const login = async (req, res) => {
     //   });
     // }
 
+    // if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    //   req.session.user = { fullname: "Admin", email, role: "admin" };
+
+    //   const redirectUrl = req.session.returnTo || "/admin/dashboard";
+    //   delete req.session.returnTo;
+
+    //   return res.json({
+    //     success: true,
+    //     role: "admin",
+    //     redirectUrl
+    //   });
+    // }
+
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      req.session.user = { fullname: "Admin", email, role: "admin" };
+
+      req.session.user = {
+        id: 0, // ✅ add this
+        fullname: "Admin",
+        email,
+        role: "admin"
+      };
 
       const redirectUrl = req.session.returnTo || "/admin/dashboard";
       delete req.session.returnTo;
@@ -139,6 +158,7 @@ const login = async (req, res) => {
         redirectUrl
       });
     }
+
 
 
     // 👤 Regular user
