@@ -12,31 +12,6 @@ exports.listProjects = async (req, res) => {
   res.render("projects/index", { projects: rows });
 };
 
-// PROJECT DETAILS
-// exports.projectDetails = async (req, res) => {
-//   const projectId = req.params.id;
-
-//   const project = await pool.query("SELECT * FROM projects WHERE id=$1", [
-//     projectId,
-//   ]);
-
-//   const images = await pool.query(
-//     "SELECT * FROM project_images WHERE project_id=$1",
-//     [projectId]
-//   );
-
-//   const videos = await pool.query(
-//     "SELECT * FROM project_videos WHERE project_id=$1",
-//     [projectId]
-//   );
-
-//   res.render("projects/details", {
-//     project: project.rows[0],
-//     images: images.rows,
-//     videos: videos.rows,
-//   });
-// };
-
 exports.projectDetails = async (req, res) => {
   const projectId = req.params.id;
 

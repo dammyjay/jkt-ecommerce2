@@ -139,9 +139,11 @@ loginForm.addEventListener("submit", async (e) => {
   // ✅ Successful login
   if (data.success) {
     if (data.role === "admin") {
-      window.location.href = "/admin/dashboard";
+      // window.location.href = "/admin/dashboard";
+      window.location.href = data.redirectUrl || "/admin/dashboard";
     } else {
-      window.location.href = "/";
+      // window.location.href = "/";
+      window.location.href = data.redirectUrl || "/";
     }
   }
 });

@@ -81,26 +81,6 @@ const signup = async (req, res) => {
 
 
 // ================== VERIFY OTP ==================
-// const verifyOtp = async (req, res) => {
-//   try {
-//     const { email, otp } = req.body;
-//     const result = await pool.query("SELECT * FROM users2 WHERE email=$1 AND otp=$2", [email, otp]);
-
-//     if (result.rowCount === 0) {
-//       return res.render("public/verifyOtp", { email, message: "Invalid OTP", user: null });
-//     }
-
-//     await pool.query("UPDATE users2 SET is_verified=true, otp=NULL WHERE email=$1", [email]);
-
-//     res.render("public/login", {
-//       message: "✅ Verification successful. Please log in.",
-//       user: null,
-//     });
-//   } catch (error) {
-//     console.error("Verify OTP Error:", error);
-//     res.render("public/verifyOtp", { email, message: "Something went wrong", user: null });
-//   }
-// };
 
 const verifyOtp = async (req, res) => {
   try {
@@ -138,14 +118,28 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     // 🔐 Admin login
+    // if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    //   req.session.user = { fullname: "Admin", email, role: "admin" };
+
+    //   return res.json({
+    //     success: true,
+    //     role: "admin"
+    //   });
+    // }
+
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       req.session.user = { fullname: "Admin", email, role: "admin" };
 
+      const redirectUrl = req.session.returnTo || "/admin/dashboard";
+      delete req.session.returnTo;
+
       return res.json({
         success: true,
-        role: "admin"
+        role: "admin",
+        redirectUrl
       });
     }
+
 
     // 👤 Regular user
     const result = await pool.query(
@@ -179,6 +173,24 @@ const login = async (req, res) => {
     }
 
     // ✅ Verified user
+    // req.session.user = {
+    //   id: user.id,
+    //   fullname: user.fullname,
+    //   email: user.email,
+    //   role: user.role,
+    //   phone: user.phone,
+    //   address: user.address,
+    //   city: user.city,
+    //   state: user.state,
+    //   profile_image: user.profile_image
+    // };
+
+    // return res.json({
+    //   success: true,
+    //   role: user.role
+    // });
+
+    // ✅ Verified user
     req.session.user = {
       id: user.id,
       fullname: user.fullname,
@@ -191,10 +203,16 @@ const login = async (req, res) => {
       profile_image: user.profile_image
     };
 
+    // Get saved return URL
+    const redirectUrl = req.session.returnTo || "/";
+    delete req.session.returnTo;
+
     return res.json({
       success: true,
-      role: user.role
+      role: user.role,
+      redirectUrl
     });
+
 
   } catch (error) {
     console.error("Login Error:", error);
