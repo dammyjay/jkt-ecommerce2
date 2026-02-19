@@ -113,37 +113,108 @@ const verifyOtp = async (req, res) => {
 
 // ================== LOGIN ==================
 
+// const login = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+
+//     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+
+//       req.session.user = {
+//         id: 0, // ✅ add this
+//         fullname: "Admin",
+//         email,
+//         role: "admin"
+//       };
+
+//       const redirectUrl = req.session.returnTo || "/admin/dashboard";
+//       delete req.session.returnTo;
+
+//       return res.json({
+//         success: true,
+//         role: "admin",
+//         redirectUrl
+//       });
+//     }
+
+
+
+//     // 👤 Regular user
+//     const result = await pool.query(
+//       "SELECT * FROM users2 WHERE email=$1",
+//       [email]
+//     );
+
+//     if (result.rowCount === 0) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "No user found"
+//       });
+//     }
+
+//     const user = result.rows[0];
+//     const validPassword = await bcrypt.compare(password, user.password);
+
+//     if (!validPassword) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Incorrect password"
+//       });
+//     }
+
+//     // 🚨 Not verified → frontend opens OTP modal
+//     if (!user.is_verified) {
+//       return res.status(403).json({
+//         needsVerification: true,
+//         email: user.email
+//       });
+//     }
+
+
+//     // ✅ Verified user
+//     req.session.user = {
+//       id: user.id,
+//       fullname: user.fullname,
+//       email: user.email,
+//       role: user.role,
+//       phone: user.phone,
+//       address: user.address,
+//       city: user.city,
+//       state: user.state,
+//       profile_image: user.profile_image
+//     };
+
+//     // Get saved return URL
+//     const redirectUrl = req.session.returnTo || "/";
+//     delete req.session.returnTo;
+
+//     return res.json({
+//       success: true,
+//       role: user.role,
+//       redirectUrl
+//     });
+
+
+//   } catch (error) {
+//     console.error("Login Error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Login failed, please try again"
+//     });
+//   }
+// };
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 🔐 Admin login
-    // if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-    //   req.session.user = { fullname: "Admin", email, role: "admin" };
-
-    //   return res.json({
-    //     success: true,
-    //     role: "admin"
-    //   });
-    // }
-
-    // if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-    //   req.session.user = { fullname: "Admin", email, role: "admin" };
-
-    //   const redirectUrl = req.session.returnTo || "/admin/dashboard";
-    //   delete req.session.returnTo;
-
-    //   return res.json({
-    //     success: true,
-    //     role: "admin",
-    //     redirectUrl
-    //   });
-    // }
-
+    /* =====================================================
+       🔐 ADMIN LOGIN
+    ====================================================== */
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
 
       req.session.user = {
-        id: 0, // ✅ add this
+        id: 0,
         fullname: "Admin",
         email,
         role: "admin"
@@ -152,16 +223,26 @@ const login = async (req, res) => {
       const redirectUrl = req.session.returnTo || "/admin/dashboard";
       delete req.session.returnTo;
 
-      return res.json({
-        success: true,
-        role: "admin",
-        redirectUrl
+      return req.session.save(err => {
+        if (err) {
+          console.error("Session Save Error:", err);
+          return res.status(500).json({
+            success: false,
+            message: "Login failed"
+          });
+        }
+
+        return res.json({
+          success: true,
+          role: "admin",
+          redirectUrl
+        });
       });
     }
 
-
-
-    // 👤 Regular user
+    /* =====================================================
+       👤 REGULAR USER LOGIN
+    ====================================================== */
     const result = await pool.query(
       "SELECT * FROM users2 WHERE email=$1",
       [email]
@@ -184,7 +265,7 @@ const login = async (req, res) => {
       });
     }
 
-    // 🚨 Not verified → frontend opens OTP modal
+    // 🚨 If user not verified
     if (!user.is_verified) {
       return res.status(403).json({
         needsVerification: true,
@@ -192,25 +273,9 @@ const login = async (req, res) => {
       });
     }
 
-    // ✅ Verified user
-    // req.session.user = {
-    //   id: user.id,
-    //   fullname: user.fullname,
-    //   email: user.email,
-    //   role: user.role,
-    //   phone: user.phone,
-    //   address: user.address,
-    //   city: user.city,
-    //   state: user.state,
-    //   profile_image: user.profile_image
-    // };
-
-    // return res.json({
-    //   success: true,
-    //   role: user.role
-    // });
-
-    // ✅ Verified user
+    /* =====================================================
+       ✅ VERIFIED USER
+    ====================================================== */
     req.session.user = {
       id: user.id,
       fullname: user.fullname,
@@ -223,16 +288,24 @@ const login = async (req, res) => {
       profile_image: user.profile_image
     };
 
-    // Get saved return URL
     const redirectUrl = req.session.returnTo || "/";
     delete req.session.returnTo;
 
-    return res.json({
-      success: true,
-      role: user.role,
-      redirectUrl
-    });
+    return req.session.save(err => {
+      if (err) {
+        console.error("Session Save Error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Login failed"
+        });
+      }
 
+      return res.json({
+        success: true,
+        role: user.role,
+        redirectUrl
+      });
+    });
 
   } catch (error) {
     console.error("Login Error:", error);
@@ -242,6 +315,7 @@ const login = async (req, res) => {
     });
   }
 };
+
 
 
 // ================== LOGOUT ==================
