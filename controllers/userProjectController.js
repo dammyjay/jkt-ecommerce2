@@ -456,6 +456,19 @@ exports.acceptQuotation = async (req, res) => {
       `
     );
 
+  //     await sendEmail(
+  //   "Jaykirchtechhub@gmail.com",
+  //   `Updated Quotation for ${data.project_title}`,
+  //   quotationTemplate({
+  //     fullname: data.fullname,
+  //     project_title: data.project_title,
+  //     amount: total,
+  //     timeline: delivery_timeline,
+  //     company_name: "JKT Technologies Hub",
+  //     view_link: viewLink
+  //   }).html
+  // );
+
     // ✅ Redirect with success flag
     res.redirect(`/projects/quotation/${bookingId}?accepted=true`);
 
