@@ -1,5 +1,6 @@
 const pool = require("../utils/db");
 const cloudinary = require("../utils/cloudinary");
+const sendEmail = require("../utils/sendEmail");
 const html_to_pdf = require("html-pdf-node");
 const puppeteer = require("puppeteer");
 
