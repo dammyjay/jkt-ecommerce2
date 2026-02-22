@@ -500,7 +500,6 @@ form .btn {
     align-items: flex-start; /* 👈 THIS IS THE KEY */
 }
 
-
 .modal-content {
     background: #fff;
     padding: 40px 30px;
@@ -513,7 +512,6 @@ form .btn {
     max-height: 90vh;      /* 👈 Important */
     overflow-y: auto;      /* 👈 Important */
 }
-
 
 /* Close button (X) */
 #closeModal {

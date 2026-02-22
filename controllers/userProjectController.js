@@ -178,9 +178,13 @@ exports.viewQuotation = async (req, res) => {
     [bookingId]
   );
 
+  // if (result.rows.length === 0) {
+  //   return res.status(404).send("Quotation not found");
+  // }
+
   if (result.rows.length === 0) {
-    return res.status(404).send("Quotation not found");
-  }
+  return res.redirect("/projects/dashboard/userProjects?noQuotation=true");
+}
 
   const quotation = result.rows[0];
 
@@ -320,54 +324,142 @@ exports.downloadQuotation = async (req, res) => {
 };
 
 
+// exports.acceptQuotation = async (req, res) => {
+//   const bookingId = req.params.id;
+//   const userId = req.session.user.id;
+
+//   await pool.query(
+//     `
+//     UPDATE project_bookings
+//     SET status = 'accepted'
+//     WHERE id = $1 AND user_id = $2
+//     `,
+//     [bookingId, userId]
+//   );
+
+//   await pool.query(
+//     `
+//     UPDATE project_quotations
+//     SET is_locked = TRUE
+//     WHERE booking_id = $1
+//     `,
+//     [bookingId]
+//   );
+
+//   const quotationRes = await pool.query(
+//   `
+//   SELECT quoted_amount
+//   FROM project_quotations
+//   WHERE booking_id = $1
+//   `,
+//   [bookingId]
+// );
+
+// const total = quotationRes.rows[0].quoted_amount;
+
+// await pool.query(
+//   `
+//   INSERT INTO project_milestones (booking_id, title, amount)
+//   VALUES
+//   ($1,'Initial Payment (30%)',$2),
+//   ($1,'Mid Project Payment (40%)',$3),
+//   ($1,'Final Delivery (30%)',$4)
+//   `,
+//   [
+//     bookingId,
+//     total * 0.3,
+//     total * 0.4,
+//     total * 0.3
+//   ]
+// );
+
+//   res.redirect("/projects/dashboard/userProjects");
+// };
+
 exports.acceptQuotation = async (req, res) => {
-  const bookingId = req.params.id;
-  const userId = req.session.user.id;
+  try {
+    const bookingId = req.params.id;
+    const userId = req.session.user.id;
 
-  await pool.query(
-    `
-    UPDATE project_bookings
-    SET status = 'accepted'
-    WHERE id = $1 AND user_id = $2
-    `,
-    [bookingId, userId]
-  );
+    // ✅ Accept booking
+    await pool.query(
+      `
+      UPDATE project_bookings
+      SET status = 'accepted'
+      WHERE id = $1 AND user_id = $2
+      `,
+      [bookingId, userId]
+    );
 
-  await pool.query(
-    `
-    UPDATE project_quotations
-    SET is_locked = TRUE
-    WHERE booking_id = $1
-    `,
-    [bookingId]
-  );
+    // ✅ Lock quotation
+    await pool.query(
+      `
+      UPDATE project_quotations
+      SET is_locked = TRUE
+      WHERE booking_id = $1
+      `,
+      [bookingId]
+    );
 
-  const quotationRes = await pool.query(
-  `
-  SELECT quoted_amount
-  FROM project_quotations
-  WHERE booking_id = $1
-  `,
-  [bookingId]
-);
+    // ✅ Get quotation + user details
+    const quotationRes = await pool.query(
+      `
+      SELECT 
+        pq.quoted_amount,
+        u.email,
+        u.fullname,
+        COALESCE(p.title, pb.custom_title) AS project_title
+      FROM project_quotations pq
+      JOIN project_bookings pb ON pb.id = pq.booking_id
+      JOIN users2 u ON u.id = pb.user_id
+      LEFT JOIN projects p ON p.id = pb.project_id
+      WHERE pq.booking_id = $1
+      `,
+      [bookingId]
+    );
 
-const total = quotationRes.rows[0].quoted_amount;
+    if (!quotationRes.rows.length) {
+      return res.status(404).send("Quotation not found");
+    }
 
-await pool.query(
-  `
-  INSERT INTO project_milestones (booking_id, title, amount)
-  VALUES
-  ($1,'Initial Payment (30%)',$2),
-  ($1,'Mid Project Payment (40%)',$3),
-  ($1,'Final Delivery (30%)',$4)
-  `,
-  [
-    bookingId,
-    total * 0.3,
-    total * 0.4,
-    total * 0.3
-  ]
-);
+    const data = quotationRes.rows[0];
+    const total = data.quoted_amount;
 
-  res.redirect("/projects/dashboard/userProjects");
+    // ✅ Create milestones
+    await pool.query(
+      `
+      INSERT INTO project_milestones (booking_id, title, amount)
+      VALUES
+      ($1,'Initial Payment (30%)',$2),
+      ($1,'Mid Project Payment (40%)',$3),
+      ($1,'Final Delivery (30%)',$4)
+      `,
+      [
+        bookingId,
+        total * 0.3,
+        total * 0.4,
+        total * 0.3
+      ]
+    );
+
+    // ✅ Send email to admin
+    await sendEmail(
+      "jaykirchtechhub@gmail.com",
+      `Quotation Accepted - ${data.project_title}`,
+      `
+      <h2>Quotation Accepted</h2>
+      <p><strong>Client:</strong> ${data.fullname}</p>
+      <p><strong>Project:</strong> ${data.project_title}</p>
+      <p><strong>Total Amount:</strong> ₦${total}</p>
+      <p>The client has accepted the quotation.</p>
+      `
+    );
+
+    // ✅ Redirect with success flag
+    res.redirect(`/projects/quotation/${bookingId}?accepted=true`);
+
+  } catch (err) {
+    console.error("Accept quotation error:", err);
+    res.status(500).send("Something went wrong");
+  }
 };

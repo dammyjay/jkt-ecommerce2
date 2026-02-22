@@ -58,3 +58,34 @@
 
 </div>
 
+<!-- No Quotation Modal -->
+<div id="noQuotationModal" class="modal">
+  <div class="modal-box center small">
+    <h3>No Quotation Found</h3>
+    <p>No quotation has been created for this project yet.</p>
+    <button class="btn btn-cancel" onclick="closeNoQuotationModal()">OK</button>
+  </div>
+</div>
+
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+
+  if (urlParams.get("noQuotation") === "true") {
+    document.getElementById("noQuotationModal").style.display = "flex";
+
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  function closeNoQuotationModal() {
+    document.getElementById("noQuotationModal").style.display = "none";
+  }
+
+  window.onclick = function (event) {
+    const modal = document.getElementById("noQuotationModal");
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  };
+</script>
+

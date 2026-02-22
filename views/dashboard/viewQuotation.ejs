@@ -34,5 +34,35 @@
           <% } %>
 </div>
 
-
+<!-- Custom Success Modal -->
+<div id="acceptModal" class="modal">
+  <div class="mmodal-box center small">
+    <h3>Quotation Accepted</h3>
+    <p>Quotation has been accepted. Admin will be notified.</p>
+    <button class="btn btn-cancel" onclick="closeModal()">OK</button>
+  </div>
 </div>
+</div>
+
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+
+  if (urlParams.get("accepted") === "true") {
+    document.getElementById("acceptModal").style.display = "flex";
+
+    // Remove query param from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  function closeModal() {
+    document.getElementById("acceptModal").style.display = "none";
+  }
+
+  // Optional: Close when clicking outside modal
+  window.onclick = function (event) {
+    const modal = document.getElementById("acceptModal");
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  };
+</script>
