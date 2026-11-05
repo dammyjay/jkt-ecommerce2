@@ -159,18 +159,53 @@
 </div>
 
 <!-- 👁️ View Product Modal -->
+<style>
+  .pv-box { max-width: 860px !important; padding: 0 !important; overflow-x: hidden; }
+  .pv-head { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid #eee; position:sticky; top:0; background:#fff; z-index:1; }
+  .pv-head h2 { margin:0; font-size:18px; }
+  .pv-head .close { position:static; font-size:26px; cursor:pointer; line-height:1; }
+  .pv-top { display:grid; grid-template-columns:minmax(0,260px) minmax(0,1fr); gap:24px; padding:24px; }
+  .pv-img { background:#f6f6f6; border:1px solid #eee; border-radius:10px; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .pv-img img { width:100%; height:100%; object-fit:contain; padding:14px; }
+  .pv-info { min-width:0; display:flex; flex-direction:column; gap:10px; }
+  .pv-cat { align-self:flex-start; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--primary-dark); background:rgba(134,102,15,.1); padding:4px 10px; border-radius:999px; }
+  .pv-name { font-size:22px; margin:0; line-height:1.3; overflow-wrap:anywhere; }
+  .pv-price { font-size:24px; font-weight:700; }
+  .pv-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; font-size:14px; }
+  .pv-grid div { background:var(--bg-soft); border:1px solid #eee; border-radius:8px; padding:8px 12px; }
+  .pv-grid span { display:block; font-size:12px; color:var(--muted); }
+  .pv-desc-wrap { border-top:1px solid #eee; padding:20px 24px 24px; }
+  .pv-desc-wrap h3 { margin:0 0 10px; font-size:16px; }
+  .pv-desc { line-height:1.7; text-align:left; overflow-wrap:anywhere; word-break:break-word; }
+  .pv-desc img, .pv-desc iframe, .pv-desc video { max-width:100%; height:auto; }
+  .pv-desc table { display:block; max-width:100%; overflow-x:auto; border-collapse:collapse; }
+  .pv-desc pre { white-space:pre-wrap; }
+  .pv-link { align-self:flex-start; font-size:14px; color:var(--primary-dark); font-weight:600; text-decoration:none; }
+  @media (max-width:640px) { .pv-top { grid-template-columns:minmax(0,1fr); } }
+</style>
+
 <div id="viewModal" class="modal">
-  <div class="modal-box">
-    <span class="close" onclick="closeViewModal()">&times;</span>
-    <h2>Product Details</h2>
-    <div id="viewContent">
-      <p><strong>Name:</strong> <span id="viewName"></span></p>
-      <p><strong>Category:</strong> <span id="viewCategory"></span></p>
-      <p><strong>Price:</strong> ₦<span id="viewPrice"></span></p>
-      <p><strong>Stock:</strong> <span id="viewStock"></span></p>
-      <p><strong>Description:</strong></p>
-      <p id="viewDescription"></p>
-      <img id="viewImage" style="width:100%; max-width:300px; margin-top:10px;">
+  <div class="modal-box pv-box">
+    <div class="pv-head">
+      <h2>Product Details</h2>
+      <span class="close" onclick="closeViewModal()">&times;</span>
+    </div>
+    <div class="pv-top">
+      <div class="pv-img"><img id="viewImage" alt=""></div>
+      <div class="pv-info">
+        <span class="pv-cat" id="viewCategory"></span>
+        <h3 class="pv-name" id="viewName"></h3>
+        <div class="pv-price" id="viewPrice"></div>
+        <div class="pv-grid">
+          <div><span>Product ID</span><strong id="viewId"></strong></div>
+          <div><span>Stock</span><strong id="viewStock"></strong></div>
+        </div>
+        <a class="pv-link" id="viewLink" target="_blank">Open product page ↗</a>
+      </div>
+    </div>
+    <div class="pv-desc-wrap">
+      <h3>Description</h3>
+      <div class="pv-desc" id="viewDescription"></div>
     </div>
   </div>
 </div>
@@ -375,21 +410,28 @@ document.getElementById('editForm').addEventListener('submit', function () {
 
   // View modal
   function openViewModal(product) {
+    const stock = Number(product.stock) || 0;
+    document.getElementById('viewId').innerText = '#' + product.id;
     document.getElementById('viewName').innerText = product.name;
     document.getElementById('viewCategory').innerText = product.category_name || 'Uncategorized';
-    document.getElementById('viewPrice').innerText = product.price;
-    document.getElementById('viewStock').innerText = product.stock;
-    document.getElementById('viewDescription').innerHTML = product.description || 'N/A';
-    if(product.image_url) {
-      document.getElementById('viewImage').src = product.image_url;
-      document.getElementById('viewImage').style.display = 'block';
-    } else {
-      document.getElementById('viewImage').style.display = 'none';
-    }
-    document.getElementById('viewModal').style.display = 'block';
+    document.getElementById('viewPrice').innerText =
+      '₦' + Number(product.price).toLocaleString('en-NG', { maximumFractionDigits: 2 });
+    document.getElementById('viewStock').innerText =
+      stock > 0 ? `${stock} in stock` : 'Out of stock';
+    document.getElementById('viewStock').style.color = stock > 0 ? '#15803d' : 'var(--danger)';
+    document.getElementById('viewDescription').innerHTML =
+      product.description || '<em style="color:#6b7280">No description</em>';
+    document.getElementById('viewLink').href = `/products/${product.id}`;
+
+    const img = document.getElementById('viewImage');
+    img.alt = product.name;
+    img.parentElement.style.display = product.image_url ? '' : 'none';
+    if (product.image_url) img.src = product.image_url;
+
+    document.getElementById('viewModal').classList.add('active');
   }
   function closeViewModal() {
-    document.getElementById('viewModal').style.display = 'none';
+    document.getElementById('viewModal').classList.remove('active');
   }
 
   window.onclick = function (event) {
@@ -406,35 +448,52 @@ document.getElementById('editForm').addEventListener('submit', function () {
 <!-- Script for filtering -->
 
 <script>
-const searchInput = document.getElementById('tableSearch');
-const categorySelect = document.getElementById('categoryFilter');
-const rows = document.querySelectorAll('.table tbody tr');
+// Wrapped in an IIFE: the navbar already declares a global `searchInput`,
+// so a top-level `const searchInput` here threw a SyntaxError and killed this script.
+(() => {
+  const tableSearch = document.getElementById('tableSearch');
+  const categorySelect = document.getElementById('categoryFilter');
+  const tbody = document.querySelector('.table tbody');
 
-function filterTable() {
-  const searchValue = searchInput.value.toLowerCase();
-  const categoryValue = categorySelect.value;
+  function filterTable() {
+    const searchValue = tableSearch.value.trim().toLowerCase();
+    const categoryValue = categorySelect.value.trim();
 
-  rows.forEach(row => {
-    const name = row.dataset.name;
-    const category = row.dataset.category;
-    const price = row.dataset.price;
-    const stock = row.dataset.stock;
+    tbody.querySelectorAll('tr[data-name]').forEach(row => {
+      const id = row.children[0].innerText.trim();
+      const { name = '', category = '', price = '', stock = '' } = row.dataset;
 
-    const matchesSearch =
-      name.includes(searchValue) ||
-      category.includes(searchValue) ||
-      price.includes(searchValue) ||
-      stock.includes(searchValue);
+      const matchesSearch =
+        !searchValue ||
+        name.includes(searchValue) ||
+        category.includes(searchValue) ||
+        price.includes(searchValue) ||
+        stock.includes(searchValue) ||
+        id === searchValue;
 
-    const matchesCategory =
-      categoryValue === "" || category === categoryValue;
+      const matchesCategory =
+        categoryValue === '' || category === categoryValue;
 
-    row.style.display = matchesSearch && matchesCategory ? "" : "none";
-  });
-}
+      row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+    });
 
-searchInput.addEventListener('input', filterTable);
-categorySelect.addEventListener('change', filterTable);
+    const visible = tbody.querySelectorAll('tr[data-name]:not([style*="none"])').length;
+    let empty = document.getElementById('noResultsRow');
+    if (!visible) {
+      if (!empty) {
+        empty = document.createElement('tr');
+        empty.id = 'noResultsRow';
+        empty.innerHTML = '<td colspan="7" style="padding:24px; color:#6b7280;">No products match your search.</td>';
+        tbody.appendChild(empty);
+      }
+    } else if (empty) {
+      empty.remove();
+    }
+  }
+
+  tableSearch.addEventListener('input', filterTable);
+  categorySelect.addEventListener('change', filterTable);
+})();
 </script>
 
 <!-- Script for sorting -->

@@ -1,174 +1,336 @@
-<!-- <div class="product-detail-container">
-  <div class="product-images">
-    <img id="mainImage" src="<%= product.image_url %>" alt="<%= product.name %>">
-  </div>
+<%
+  const price = Number(product.price) || 0;
+  const stock = Number(product.stock) || 0;
+  const inStock = stock > 0;
+  const lowStock = inStock && stock <= 5;
+  const fmt = n => "₦" + Number(n).toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const related = typeof relatedProducts !== "undefined" ? relatedProducts : [];
+%>
 
-  <div class="product-info">
-    <h1><%= product.name %></h1>
-    <p class="category">Category: <%= product.category_name %></p>
-    <p class="price">₦<%= product.price.toLocaleString() %></p>
-    <p class="description"><%- product.description %></p>
+<style>
+  .pd-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
 
+  .pd-breadcrumb { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .pd-breadcrumb a { color: var(--muted); text-decoration: none; }
+  .pd-breadcrumb a:hover { color: var(--primary-dark); }
+  .pd-breadcrumb .current { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60ch; }
 
-    <form id="addToCartForm" method="POST" action="/cart/add/<%= product.id %>">
-      <label for="quantity">Quantity:</label>
-      <input type="number" name="quantity" id="quantity" value="1" min="1">
-      <button type="submit" class="btn-add-cart">Add to Cart</button>
-    </form>
-  </div>
-</div>
-
-
-<div id="cartNotification" class="modal-notification" style="display:none;">
-  <div class="modal-content">
-    <p id="cartMessage"></p>
-    <div class="modal-actions">
-      <button onclick="closeCartNotification()" class="btn-close">Continue Shopping</button>
-      <a href="/cart" class="btn-view-cart">View Cart</a>
-    </div>
-  </div>
-</div>
-
-
-<script>
-const addToCartForm = document.getElementById("addToCartForm");
-const notification = document.getElementById("cartNotification");
-const cartMessage = document.getElementById("cartMessage");
-
-function closeCartNotification() {
-  notification.style.display = "none";
-}
-
-addToCartForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const formData = new FormData(addToCartForm);
-  const quantity = formData.get("quantity");
-
-  const res = await fetch(addToCartForm.action, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ quantity })
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    cartMessage.textContent = data.message;
-    notification.style.display = "flex";
-
-    setTimeout(() => {
-      notification.style.display = "none";
-    }, 3000);
+  .pd-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    background: var(--white);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 28px;
   }
-});
-</script> -->
 
-<div class="container product-detail-container">
+  /* Gallery */
+  .pd-gallery { position: sticky; top: 20px; align-self: start; }
+  .pd-image-frame {
+    background: #f6f6f6;
+    border: 1px solid #eee;
+    border-radius: var(--r-lg);
+    aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    cursor: zoom-in;
+  }
+  .pd-image-frame img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    padding: 24px;
+    transition: transform .35s ease;
+  }
+  .pd-image-frame.zoomed img { transform: scale(1.8); cursor: zoom-out; }
+  .pd-noimage { color: var(--muted); font-size: 14px; }
 
-  <div class="product-detail card">
+  /* Info */
+  .pd-info { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  .pd-category {
+    align-self: flex-start;
+    font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--primary-dark);
+    background: rgba(134, 102, 15, .1);
+    padding: 4px 10px; border-radius: 999px;
+    text-decoration: none;
+  }
+  .pd-title { font-size: clamp(22px, 3vw, 30px); line-height: 1.25; margin: 0; color: var(--black); overflow-wrap: anywhere; }
+  .pd-price { font-size: 28px; font-weight: 700; color: var(--black); }
 
-    <!-- Product Image -->
-    <div class="product-images">
-      <img
-        id="mainImage"
-        src="<%= product.image_url %>"
-        alt="<%= product.name %>"
-      >
+  .pd-stock { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+  .pd-stock::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .pd-stock.in { color: #15803d; }
+  .pd-stock.low { color: #b45309; }
+  .pd-stock.out { color: var(--danger); }
+
+  .pd-divider { border: 0; border-top: 1px solid #eee; margin: 4px 0; }
+
+  .pd-buy { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; }
+  .pd-qty {
+    display: inline-flex; align-items: center;
+    border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
+    height: 48px;
+  }
+  .pd-qty button {
+    width: 44px; height: 100%; border: 0; background: #f5f5f5;
+    font-size: 18px; cursor: pointer; color: var(--text);
+  }
+  .pd-qty button:hover { background: #ebebeb; }
+  .pd-qty input {
+    width: 56px; height: 100%; border: 0; text-align: center; font-size: 16px;
+    margin: 0; padding: 0; -moz-appearance: textfield; appearance: textfield;
+  }
+  .pd-qty input::-webkit-outer-spin-button,
+  .pd-qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .pd-add {
+    flex: 1 1 200px; height: 48px; border: 0; border-radius: var(--r-md);
+    background: var(--primary-dark); color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    transition: background .2s ease;
+  }
+  .pd-add:hover { background: var(--black); }
+  .pd-add:disabled { background: #bdbdbd; cursor: not-allowed; }
+
+  .pd-perks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .pd-perk {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--muted);
+    background: var(--bg-soft); border: 1px solid #eee; border-radius: var(--r-md); padding: 10px 12px;
+  }
+  .pd-perk i { color: var(--primary-dark); font-size: 16px; }
+
+  .pd-meta { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+  .pd-meta strong { color: var(--text); font-weight: 500; }
+
+  /* Description */
+  .pd-section {
+    margin-top: 28px; background: var(--white);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-sm); overflow: hidden;
+  }
+  .pd-section-head { padding: 16px 28px; border-bottom: 1px solid #eee; font-weight: 600; font-size: 17px; }
+  .pd-description {
+    padding: 24px 28px; line-height: 1.75; color: var(--text);
+    overflow-wrap: anywhere; word-break: break-word;
+  }
+  .pd-description > :first-child { margin-top: 0; }
+  .pd-description img, .pd-description video, .pd-description iframe { max-width: 100%; height: auto; }
+  .pd-description table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+  .pd-description td, .pd-description th { border: 1px solid #e5e5e5; padding: 6px 10px; }
+  .pd-description pre { white-space: pre-wrap; }
+  .pd-description ul, .pd-description ol { padding-left: 1.4em; }
+  .pd-description blockquote { margin: 1em 0; padding: 8px 16px; border-left: 3px solid var(--primary); background: var(--bg-soft); }
+  .pd-description h1, .pd-description h2, .pd-description h3 { line-height: 1.3; margin: 1.2em 0 .5em; }
+
+  /* Related */
+  .pd-related { margin-top: 36px; }
+  .pd-related h2 { font-size: 20px; margin: 0 0 16px; }
+  .pd-related-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .pd-card {
+    background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+    text-decoration: none; color: inherit; overflow: hidden;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .pd-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .pd-card-img { aspect-ratio: 1 / 1; background: #f6f6f6; display: flex; align-items: center; justify-content: center; }
+  .pd-card-img img { width: 100%; height: 100%; object-fit: contain; padding: 14px; }
+  .pd-card-body { padding: 12px 14px 16px; }
+  .pd-card-name { font-size: 14px; margin: 0 0 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .pd-card-price { font-weight: 700; }
+
+  /* Toast */
+  .pd-toast {
+    position: fixed; right: 20px; bottom: 20px; z-index: 2000;
+    background: var(--black); color: #fff; border-radius: var(--r-md);
+    box-shadow: var(--shadow-md); padding: 14px 16px; max-width: calc(100vw - 40px);
+    display: flex; align-items: center; gap: 14px;
+    transform: translateY(140%); opacity: 0; transition: all .3s ease;
+  }
+  .pd-toast.show { transform: none; opacity: 1; }
+  .pd-toast a { color: #f8d27a; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .pd-toast.error { background: var(--danger); }
+
+  @media (max-width: 900px) {
+    .pd-main { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 18px; }
+    .pd-gallery { position: static; }
+    .pd-related-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 520px) {
+    .pd-perks { grid-template-columns: minmax(0, 1fr); }
+    .pd-description, .pd-section-head { padding-left: 16px; padding-right: 16px; }
+    .pd-add { flex-basis: 100%; }
+  }
+</style>
+
+<div class="pd-wrap">
+
+  <nav class="pd-breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> <span>/</span>
+    <a href="/products">Shop</a> <span>/</span>
+    <% if (product.category_name) { %>
+      <span><%= product.category_name %></span> <span>/</span>
+    <% } %>
+    <span class="current"><%= product.name %></span>
+  </nav>
+
+  <section class="pd-main">
+
+    <!-- Gallery -->
+    <div class="pd-gallery">
+      <div class="pd-image-frame" id="imageFrame">
+        <% if (product.image_url) { %>
+          <img id="mainImage" src="<%= product.image_url %>" alt="<%= product.name %>">
+        <% } else { %>
+          <span class="pd-noimage">No image available</span>
+        <% } %>
+      </div>
     </div>
 
-    <!-- Product Info -->
-    <div class="product-info">
-      <h1><%= product.name %></h1>
+    <!-- Info -->
+    <div class="pd-info">
+      <% if (product.category_name) { %>
+        <span class="pd-category"><%= product.category_name %></span>
+      <% } %>
 
-      <p class="muted">
-        Category: <strong><%= product.category_name %></strong>
-      </p>
+      <h1 class="pd-title"><%= product.name %></h1>
 
-      <h3>₦<%= product.price.toLocaleString() %></h3>
+      <div class="pd-price"><%= fmt(price) %></div>
 
-      <p class="description">
-        <%- product.description %>
-      </p>
+      <% if (!inStock) { %>
+        <span class="pd-stock out">Out of stock</span>
+      <% } else if (lowStock) { %>
+        <span class="pd-stock low">Only <%= stock %> left in stock</span>
+      <% } else { %>
+        <span class="pd-stock in">In stock</span>
+      <% } %>
 
-      <!-- Add to Cart -->
-      <form
-        id="addToCartForm"
-        method="POST"
-        action="/cart/add/<%= product.id %>"
-      >
-        <label for="quantity">Quantity</label>
+      <hr class="pd-divider">
 
-        <input
-          type="number"
-          name="quantity"
-          id="quantity"
-          value="1"
-          min="1"
-        >
-
-        <button type="submit" class="btn btn-primary btn-full">
-          Add to Cart
+      <form id="addToCartForm" class="pd-buy" method="POST" action="/cart/add/<%= product.id %>">
+        <div class="pd-qty">
+          <button type="button" aria-label="Decrease quantity" data-step="-1">−</button>
+          <input type="number" name="quantity" id="quantity" value="1" min="1"
+                 <% if (inStock) { %>max="<%= stock %>"<% } %> aria-label="Quantity">
+          <button type="button" aria-label="Increase quantity" data-step="1">+</button>
+        </div>
+        <button type="submit" class="pd-add" <%= inStock ? "" : "disabled" %>>
+          <i class="fa-solid fa-cart-shopping"></i>
+          <%= inStock ? "Add to Cart" : "Out of Stock" %>
         </button>
       </form>
-    </div>
 
-  </div>
+      <div class="pd-perks">
+        <div class="pd-perk"><i class="fa-solid fa-truck-fast"></i> Fast delivery</div>
+        <div class="pd-perk"><i class="fa-solid fa-shield-halved"></i> Secure payment</div>
+        <div class="pd-perk"><i class="fa-solid fa-circle-check"></i> Quality assured</div>
+      </div>
+
+      <div class="pd-meta">
+        <div>SKU: <strong>JKT-<%= String(product.id).padStart(4, "0") %></strong></div>
+        <% if (product.category_name) { %>
+          <div>Category: <strong><%= product.category_name %></strong></div>
+        <% } %>
+      </div>
+    </div>
+  </section>
+
+  <!-- Description -->
+  <section class="pd-section">
+    <div class="pd-section-head">Product Description</div>
+    <div class="pd-description">
+      <% if (product.description && product.description.trim()) { %>
+        <%- product.description %>
+      <% } else { %>
+        <p style="color:var(--muted)">No description available for this product.</p>
+      <% } %>
+    </div>
+  </section>
+
+  <!-- Related -->
+  <% if (related.length) { %>
+    <section class="pd-related">
+      <h2>You may also like</h2>
+      <div class="pd-related-grid">
+        <% related.forEach(r => { %>
+          <a class="pd-card" href="/products/<%= r.id %>">
+            <div class="pd-card-img">
+              <% if (r.image_url) { %><img src="<%= r.image_url %>" alt="<%= r.name %>" loading="lazy"><% } %>
+            </div>
+            <div class="pd-card-body">
+              <p class="pd-card-name"><%= r.name %></p>
+              <div class="pd-card-price"><%= fmt(r.price) %></div>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+  <% } %>
 </div>
 
-
-<div id="cartNotification" class="modal">
-  <div class="modal-box center small">
-
-    <p id="cartMessage"></p>
-
-    <div style="display:flex; gap:10px; margin-top:20px;">
-      <button
-        type="button"
-        class="btn btn-secondary"
-        onclick="closeCartNotification()"
-      >
-        Continue Shopping
-      </button>
-
-      <a href="/cart" class="btn btn-primary">
-        View Cart
-      </a>
-    </div>
-
-  </div>
+<div class="pd-toast" id="cartToast" role="status" aria-live="polite">
+  <span id="cartMessage"></span>
+  <a href="/cart">View Cart →</a>
 </div>
 
 <script>
-const addToCartForm = document.getElementById("addToCartForm");
-const notification = document.getElementById("cartNotification");
-const cartMessage = document.getElementById("cartMessage");
+(() => {
+  const form = document.getElementById("addToCartForm");
+  const qty = document.getElementById("quantity");
+  const toast = document.getElementById("cartToast");
+  const msg = document.getElementById("cartMessage");
+  const frame = document.getElementById("imageFrame");
+  const maxQty = parseInt(qty.max) || Infinity;
+  let toastTimer;
 
-function closeCartNotification() {
-  notification.classList.remove("active");
-}
-
-addToCartForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const formData = new FormData(addToCartForm);
-  const quantity = formData.get("quantity");
-
-  const res = await fetch(addToCartForm.action, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ quantity })
+  // Quantity stepper
+  form.querySelectorAll(".pd-qty button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const next = (parseInt(qty.value) || 1) + parseInt(btn.dataset.step);
+      qty.value = Math.min(Math.max(next, 1), maxQty);
+    });
+  });
+  qty.addEventListener("change", () => {
+    qty.value = Math.min(Math.max(parseInt(qty.value) || 1, 1), maxQty);
   });
 
-  const data = await res.json();
-
-  if (data.success) {
-    cartMessage.textContent = data.message;
-    notification.classList.add("active");
-
-    setTimeout(() => {
-      notification.classList.remove("active");
-    }, 3000);
+  // Click-to-zoom image
+  if (frame && document.getElementById("mainImage")) {
+    frame.addEventListener("click", e => {
+      const img = frame.querySelector("img");
+      const r = frame.getBoundingClientRect();
+      img.style.transformOrigin = `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`;
+      frame.classList.toggle("zoomed");
+    });
+    frame.addEventListener("mouseleave", () => frame.classList.remove("zoomed"));
   }
-});
-</script>
 
+  function showToast(text, isError) {
+    msg.textContent = text;
+    toast.classList.toggle("error", !!isError);
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 3500);
+  }
+
+  // Add to cart
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const btn = form.querySelector(".pd-add");
+    btn.disabled = true;
+    try {
+      const res = await fetch(form.action, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: qty.value })
+      });
+      const data = await res.json();
+      if (data.success) showToast(data.message);
+      else showToast(data.error || "Could not add to cart", true);
+    } catch {
+      showToast("Network error. Please try again.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>

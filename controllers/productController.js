@@ -149,8 +149,20 @@ exports.getProductById = async (req, res) => {
 
     const product = result.rows[0];
 
+    const related = await pool.query(
+      `
+      SELECT id, name, price, image_url
+      FROM products
+      WHERE id <> $1 AND category_id IS NOT DISTINCT FROM $2
+      ORDER BY created_at DESC
+      LIMIT 4
+      `,
+      [id, product.category_id]
+    );
+
     res.render("public/detail", {
       product,
+      relatedProducts: related.rows,
       user: req.session.user,
 
       // ✅ Dynamic SEO
