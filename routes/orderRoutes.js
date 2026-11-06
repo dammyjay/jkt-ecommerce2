@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/orderController");
+const myOrders = require("../controllers/myOrdersController");
 const { isAuthenticated, isAdmin } = require("../middlewares/authMiddleware");
 
 // 👤 User Orders
-router.get("/", isAuthenticated, orderController.getUserOrders);
+router.get("/", isAuthenticated, myOrders.list);
 router.post("/create", isAuthenticated, orderController.placeOrder);
 
 
@@ -48,5 +49,10 @@ router.get(
 
 router.get('/invoice/:id', isAdmin, orderController.downloadInvoice);
 
+
+// Customer order pages (declared last so /admin/... routes match first)
+router.get("/:id", isAuthenticated, myOrders.detail);
+router.post("/:id/pay", isAuthenticated, myOrders.payNow);
+router.post("/:id/reorder", isAuthenticated, myOrders.reorder);
 
 module.exports = router;

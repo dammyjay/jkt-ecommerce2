@@ -57,6 +57,11 @@
 
 <div class="ct-wrap">
   <h1>Your Cart</h1>
+  <% if (typeof notice !== "undefined" && notice) { %>
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:8px; padding:10px 14px; margin:-8px 0 16px;">
+      <%= notice %>
+    </div>
+  <% } %>
 
   <% if (!summary.items.length) { %>
     <div class="ct-empty">

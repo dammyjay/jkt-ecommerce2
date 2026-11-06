@@ -67,7 +67,12 @@
       <% } %>
     </div>
 
-    <a href="/products" class="btn btn-primary" style="margin-top:20px;">Continue Shopping</a>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px;">
+      <% if (typeof user !== "undefined" && user) { %>
+        <a href="/orders/<%= order.id %>" class="btn btn-secondary">Track this order</a>
+      <% } %>
+      <a href="/products" class="btn btn-primary">Continue Shopping</a>
+    </div>
   </div>
 </div>
 

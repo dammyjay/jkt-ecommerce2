@@ -1,0 +1,65 @@
+<% const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 }); %>
+
+<style>
+  .mo-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  .mo-wrap h1 { margin: 0 0 20px; font-size: 26px; }
+  .mo-list { display: grid; gap: 14px; }
+  .mo-card {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center;
+    background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+    padding: 16px 18px; text-decoration: none; color: inherit; transition: box-shadow .2s, transform .2s;
+  }
+  .mo-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .mo-thumbs { display: flex; }
+  .mo-thumbs img, .mo-thumbs span {
+    width: 56px; height: 56px; border-radius: 8px; border: 2px solid #fff; background: #f6f6f6;
+    object-fit: contain; padding: 4px; margin-left: -14px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .mo-thumbs > :first-child { margin-left: 0; }
+  .mo-num { font-weight: 700; }
+  .mo-meta { font-size: 13px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+  .mo-right { text-align: right; display: grid; gap: 6px; justify-items: end; }
+  .mo-total { font-weight: 700; font-size: 16px; }
+  .mo-badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .mo-empty { text-align: center; padding: 60px 20px; background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+  .mo-empty i { font-size: 44px; color: var(--border); margin-bottom: 10px; }
+  @media (max-width: 560px) {
+    .mo-card { grid-template-columns: minmax(0, 1fr) auto; }
+    .mo-thumbs { display: none; }
+  }
+</style>
+
+<div class="mo-wrap">
+  <h1>My Orders</h1>
+
+  <% if (!orders.length) { %>
+    <div class="mo-empty">
+      <i class="fa-solid fa-box-open"></i>
+      <p>You haven't placed any orders yet.</p>
+      <a href="/products" class="btn btn-primary">Start shopping</a>
+    </div>
+  <% } else { %>
+    <div class="mo-list">
+      <% orders.forEach(o => { const d = o.display; %>
+        <a class="mo-card" href="/orders/<%= o.id %>">
+          <div class="mo-thumbs">
+            <% (o.images || []).forEach(src => { %><img src="<%= src %>" alt=""><% }) %>
+            <% if (!(o.images || []).length) { %><span></span><% } %>
+          </div>
+          <div>
+            <div class="mo-num"><%= o.order_number || ("#" + o.id) %></div>
+            <div class="mo-meta">
+              <%= new Date(o.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" }) %>
+              · <%= o.items_count %> item<%= o.items_count === 1 ? "" : "s" %>
+              <% if (o.first_item) { %>· <%= o.first_item %><%= o.items_count > 1 ? " and more" : "" %><% } %>
+            </div>
+          </div>
+          <div class="mo-right">
+            <span class="mo-total"><%= fmt(o.total_amount) %></span>
+            <span class="mo-badge" style="color:<%= d.color %>; background:<%= d.bg %>;"><%= d.label %></span>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</div>

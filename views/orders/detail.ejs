@@ -1,0 +1,178 @@
+<%
+  const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+  const date = d => d ? new Date(d).toLocaleString("en-NG", { timeZone: "Africa/Lagos", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+  const d = order.display;
+  const paid = order.payment_status === "paid";
+  const awaitingPayment = !paid && order.status === "pending" && order.payment_status !== "expired" && order.payment_status !== "review";
+  const steps = [
+    { label: "Order placed", at: order.created_at },
+    { label: "Payment confirmed", at: order.paid_at },
+    { label: "Processing", at: null },
+    { label: "Completed", at: null },
+  ];
+%>
+
+<style>
+  .od-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  .od-back { font-size: 14px; color: var(--muted); text-decoration: none; }
+  .od-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 20px; }
+  .od-head h1 { margin: 0; font-size: 24px; }
+  .od-head .od-date { color: var(--muted); font-size: 14px; }
+  .od-badge { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 999px; }
+  .od-card { background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; margin-bottom: 16px; }
+  .od-card h2 { font-size: 17px; margin: 0 0 14px; }
+  .od-flash { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; }
+
+  .od-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); position: relative; }
+  .od-step { text-align: center; position: relative; padding-top: 34px; font-size: 13px; }
+  .od-step::before {
+    content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 22px; border-radius: 50%; background: #e5e7eb; border: 3px solid #fff; box-shadow: 0 0 0 1px #e5e7eb; z-index: 1;
+  }
+  .od-step::after { content: ""; position: absolute; top: 16px; left: -50%; width: 100%; height: 3px; background: #e5e7eb; }
+  .od-step:first-child::after { display: none; }
+  .od-step.done::before { background: #16a34a; box-shadow: 0 0 0 1px #16a34a; }
+  .od-step.done::after { background: #16a34a; }
+  .od-step strong { display: block; }
+  .od-step small { color: var(--muted); }
+  .od-cancelled { color: #6b7280; font-size: 14px; margin: 0; }
+
+  .od-item { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+  .od-item:last-of-type { border-bottom: 0; }
+  .od-item img, .od-item .od-noimg { width: 56px; height: 56px; border-radius: 8px; background: #f6f6f6; object-fit: contain; padding: 4px; border: 1px solid #eee; }
+  .od-item a { color: var(--black); text-decoration: none; font-weight: 500; overflow-wrap: anywhere; }
+  .od-item small { display: block; color: var(--muted); }
+  .od-row { display: flex; justify-content: space-between; margin: 8px 0; }
+  .od-row.green { color: #15803d; }
+  .od-row.total { font-weight: 700; font-size: 18px; border-top: 1px solid #eee; padding-top: 10px; }
+
+  .od-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .od-grid p { margin: 4px 0; font-size: 14px; overflow-wrap: anywhere; }
+  .od-muted { color: var(--muted); }
+
+  .od-bank { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 14px; margin-top: 10px; }
+  .od-bank-row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; }
+  .od-bank-row span { color: var(--muted); }
+  .od-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .od-actions form { margin: 0; }
+
+  @media (max-width: 600px) {
+    .od-grid { grid-template-columns: minmax(0, 1fr); }
+    .od-step { font-size: 11px; }
+  }
+</style>
+
+<div class="od-wrap">
+  <a class="od-back" href="/orders">← All orders</a>
+
+  <div class="od-head">
+    <div>
+      <h1><%= order.order_number %></h1>
+      <div class="od-date">Placed <%= date(order.created_at) %></div>
+    </div>
+    <span class="od-badge" style="color:<%= d.color %>; background:<%= d.bg %>;"><%= d.label %></span>
+  </div>
+
+  <% if (flash) { %><div class="od-flash"><%= flash %></div><% } %>
+
+  <!-- Tracking -->
+  <div class="od-card">
+    <h2>Order status</h2>
+    <% if (d.step < 0) { %>
+      <p class="od-cancelled">
+        This order was cancelled<%= order.payment_status === "expired" ? " because payment wasn't received in time" : "" %>.
+        You can reorder the same items below.
+      </p>
+    <% } else { %>
+      <div class="od-steps">
+        <% steps.forEach((s, i) => { %>
+          <div class="od-step <%= i <= d.step ? 'done' : '' %>">
+            <strong><%= s.label %></strong>
+            <% if (s.at && i <= d.step) { %><small><%= date(s.at) %></small><% } %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Payment needed -->
+  <% if (awaitingPayment) { %>
+    <div class="od-card">
+      <h2>Complete your payment</h2>
+      <p style="margin:0 0 10px;">Amount due: <strong><%= fmt(order.total_amount) %></strong>
+        <% if (order.payment_method === "bank_transfer") { %>
+          · pay by <strong><%= date(payBy) %></strong>
+        <% } %>
+      </p>
+      <div class="od-actions">
+        <% if (paystackEnabled) { %>
+          <form method="POST" action="/orders/<%= order.id %>/pay">
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-lock"></i> Pay <%= fmt(order.total_amount) %> online</button>
+          </form>
+        <% } %>
+      </div>
+      <% if (order.payment_method === "bank_transfer" && bank) { %>
+        <div class="od-bank">
+          <div style="font-size:13px; margin-bottom:6px;"><%= paystackEnabled ? "Or transfer to:" : "Transfer to:" %></div>
+          <div class="od-bank-row"><span>Bank</span><strong><%= bank.bankName %></strong></div>
+          <div class="od-bank-row"><span>Account number</span><strong><%= bank.accountNumber %></strong></div>
+          <div class="od-bank-row"><span>Account name</span><strong><%= bank.accountName %></strong></div>
+          <div class="od-bank-row"><span>Narration</span><strong><%= order.order_number %></strong></div>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
+
+  <!-- Items -->
+  <div class="od-card">
+    <h2>Items</h2>
+    <% order.items.forEach(i => { %>
+      <div class="od-item">
+        <% if (i.image_url) { %><img src="<%= i.image_url %>" alt=""><% } else { %><span class="od-noimg"></span><% } %>
+        <div>
+          <% if (i.product_id && i.name) { %>
+            <a href="/products/<%= i.product_id %>"><%= i.name %></a>
+          <% } else { %>
+            <span><%= i.name || "Product no longer available" %></span>
+          <% } %>
+          <small><%= i.quantity %> × <%= fmt(i.price) %></small>
+        </div>
+        <strong><%= fmt(i.price * i.quantity) %></strong>
+      </div>
+    <% }) %>
+
+    <div style="margin-top:10px;">
+      <div class="od-row"><span>Subtotal</span><span><%= fmt(order.subtotal_amount ?? order.total_amount) %></span></div>
+      <% if (Number(order.discount_amount) > 0) { %>
+        <div class="od-row green"><span>Coupon (<%= order.coupon_code %>)</span><span>-<%= fmt(order.discount_amount) %></span></div>
+      <% } %>
+      <div class="od-row total"><span><%= paid ? "Total paid" : "Total" %></span><span><%= fmt(order.total_amount) %></span></div>
+    </div>
+  </div>
+
+  <!-- Delivery & payment -->
+  <div class="od-grid">
+    <div class="od-card" style="margin:0;">
+      <h2>Delivery</h2>
+      <p><strong><%= order.customer_name %></strong></p>
+      <p><%= order.address %></p>
+      <% if (order.customer_phone) { %><p class="od-muted"><%= order.customer_phone %></p><% } %>
+    </div>
+    <div class="od-card" style="margin:0;">
+      <h2>Payment</h2>
+      <p>
+        <%= order.payment_method === "paystack" ? "Paystack" : order.payment_method === "bank_transfer" ? "Bank transfer" : "—" %>
+        <% if (order.payment_channel && order.payment_channel !== "manual") { %>· <%= order.payment_channel %><% } %>
+      </p>
+      <p class="od-muted"><%= paid ? "Paid " + date(order.paid_at) : "Not paid yet" %></p>
+      <% if (paid && order.payment_reference) { %><p class="od-muted" style="font-size:12px;">Ref: <%= order.payment_reference %></p><% } %>
+    </div>
+  </div>
+
+  <div class="od-actions" style="margin-top:16px;">
+    <form method="POST" action="/orders/<%= order.id %>/reorder">
+      <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-rotate-right"></i> Buy these again</button>
+    </form>
+    <a class="btn" href="/products">Continue shopping</a>
+  </div>
+</div>

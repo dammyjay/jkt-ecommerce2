@@ -13,9 +13,12 @@ function ensureCart(req) {
 exports.getCart = async (req, res) => {
   try {
     const summary = await priceCart(req);
+    const notice = req.session.cartNotice || null;
+    delete req.session.cartNotice;
     res.render("public/cart", {
       cart: req.session.cart,
       summary,
+      notice,
       user: req.session.user,
       title: "Your Cart | JKT E-Commerce",
     });

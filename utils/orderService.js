@@ -9,7 +9,7 @@ async function loadOrder(orderId) {
   const order = await pool.query("SELECT * FROM orders WHERE id = $1", [orderId]);
   if (!order.rows.length) return null;
   const items = await pool.query(
-    `SELECT oi.quantity, oi.price, p.name, p.image_url
+    `SELECT oi.product_id, oi.quantity, oi.price, p.name, p.image_url
      FROM order_items oi
      LEFT JOIN products p ON p.id = oi.product_id
      WHERE oi.order_id = $1
@@ -138,7 +138,7 @@ async function sendOrderEmails(order) {
         ${itemsTable(order)}
         <p style="margin-top:16px"><strong>Delivery address:</strong><br>${escapeHtml(order.address)}</p>
         <p style="color:#6b7280;font-size:13px">Payment reference: ${escapeHtml(order.payment_reference || "-")}</p>
-        <p><a href="${base}/products" style="color:#6f520c">Continue shopping</a></p>`)
+        <p><a href="${base}/orders/${order.id}" style="color:#6f520c">Track your order</a></p>`)
     ));
   }
 
@@ -217,7 +217,8 @@ async function sendBankTransferPlacedEmails(order) {
         <p>Thanks for your order <strong>${escapeHtml(order.order_number)}</strong>. To complete it, please make a bank transfer:</p>
         ${bankBox(order)}
         ${itemsTable(order).replace("Total paid", "Total due")}
-        <p style="margin-top:16px">Once we confirm your payment we'll email your receipt and start preparing your order.</p>`)
+        <p style="margin-top:16px">Once we confirm your payment we'll email your receipt and start preparing your order.</p>
+        <p><a href="${base}/orders/${order.id}" style="color:#6f520c">View your order</a> (sign in with this email)</p>`)
     ));
   }
 
