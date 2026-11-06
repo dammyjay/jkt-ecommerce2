@@ -25,7 +25,7 @@ exports.placeOrder = async (req, res) => {
 // 👤 User: View own orders
 exports.getUserOrders = async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM orders WHERE user_id = $1", [
+    const result = await pool.query("SELECT * FROM orders WHERE user_id = $1 AND deleted IS NOT TRUE ORDER BY created_at DESC", [
       req.session.user.id,
     ]);
     res.render("orders/list", { orders: result.rows, user: req.session.user, title: "My Orders | JKT E-Commerce",
@@ -49,6 +49,7 @@ exports.getAllOrdersAdmin = async (req, res) => {
       FROM orders o
       LEFT JOIN users2 u ON o.user_id = u.id
       LEFT JOIN users2 a ON o.issued_by = a.id
+      WHERE o.deleted IS NOT TRUE
       ORDER BY o.created_at DESC
     `);
 

@@ -10,7 +10,7 @@ exports.getDashboard = async (req, res) => {
     const totalProducts = totalProductsRes.rows[0].count;
 
     // Total Orders
-    const totalOrdersRes = await pool.query("SELECT COUNT(*) FROM orders");
+    const totalOrdersRes = await pool.query("SELECT COUNT(*) FROM orders WHERE deleted IS NOT TRUE");
     const totalOrders = totalOrdersRes.rows[0].count;
 
     // Total Users
@@ -43,7 +43,7 @@ exports.getDashboard = async (req, res) => {
 
     // New Orders (last 7 days)
     const newOrdersRes = await pool.query(
-      "SELECT COUNT(*) FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'"
+      "SELECT COUNT(*) FROM orders WHERE deleted IS NOT TRUE AND created_at >= NOW() - INTERVAL '7 days'"
     );
     const newOrders = newOrdersRes.rows[0].count;
 
@@ -83,6 +83,7 @@ exports.getDashboard = async (req, res) => {
       SELECT o.id, u.fullname AS user_name, o.total_amount, o.status, o.created_at
       FROM orders o
       JOIN users2 u ON o.user_id = u.id
+      WHERE o.deleted IS NOT TRUE
       ORDER BY o.created_at DESC
       LIMIT 10
     `);

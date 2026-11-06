@@ -248,6 +248,7 @@ async function remindUnpaidOrders() {
      WHERE payment_method = 'bank_transfer'
        AND payment_status = 'unpaid'
        AND status <> 'cancelled'
+       AND deleted IS NOT TRUE
        AND reminder_sent_at IS NULL
        AND created_at < NOW() - make_interval(hours => $1)
        AND created_at > NOW() - make_interval(hours => $2)

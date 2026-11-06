@@ -376,7 +376,7 @@ function editOrder(orderId) {
     document.getElementById('deleteOrderModal').style.display = 'flex';
     // deleteModal.classList.add("active");
 
-    document.getElementById("deleteOrderName").textContent = `Order #${id}`;
+    document.getElementById("deleteOrderName").textContent = label || `Order #${id}`;
     document.getElementById("deleteOrderForm").action =
       `/orders/admin/${id}/delete`;
   }
