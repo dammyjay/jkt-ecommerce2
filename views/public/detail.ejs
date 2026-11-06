@@ -263,6 +263,28 @@
     </div>
   </section>
 
+  <!-- Projects that use this product -->
+  <% const usedIn = typeof usedInProjects !== "undefined" ? usedInProjects : []; %>
+  <% if (usedIn.length) { %>
+    <section class="pd-related">
+      <h2>🛠️ Build something with it</h2>
+      <p style="margin:-8px 0 14px; color:var(--muted); font-size:14px;">Projects that use this part, with every component ready to add to your cart.</p>
+      <div class="pd-related-grid">
+        <% usedIn.forEach(pj => { %>
+          <a class="pd-card" href="/projects/<%= pj.id %>#parts">
+            <div class="pd-card-img" style="aspect-ratio:16/10;">
+              <% if (pj.thumbnail_image) { %><img src="<%= pj.thumbnail_image %>" alt="<%= pj.title %>" loading="lazy" style="object-fit:cover; padding:0;"><% } %>
+            </div>
+            <div class="pd-card-body">
+              <p class="pd-card-name"><%= pj.title %></p>
+              <% if (pj.complexity_level) { %><div style="font-size:12px; color:var(--muted);"><%= pj.complexity_level %></div><% } %>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+  <% } %>
+
   <!-- Related -->
   <% if (related.length) { %>
     <section class="pd-related">

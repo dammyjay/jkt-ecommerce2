@@ -1,6 +1,7 @@
 const pool = require("../utils/db");
 const cloudinary = require("../utils/cloudinary");
 const sendEmail = require("../utils/sendEmail");
+const { getProjectParts, addItemsToCart } = require("../utils/projectParts");
 const html_to_pdf = require("html-pdf-node");
 const puppeteer = require("puppeteer");
 
@@ -21,14 +22,48 @@ exports.projectDetails = async (req, res) => {
   }
 
   const project = await pool.query("SELECT * FROM projects WHERE id=$1", [projectId]);
+  if (!project.rows.length) return res.status(404).send("Project not found");
   const images = await pool.query("SELECT * FROM project_images WHERE project_id=$1", [projectId]);
   const videos = await pool.query("SELECT * FROM project_videos WHERE project_id=$1", [projectId]);
+  const partsList = await getProjectParts(projectId);
 
   res.render("projects/details", {
+    title: `${project.rows[0].title} | JKT Projects`,
+    description: project.rows[0].short_description || `Build ${project.rows[0].title} with parts from JKT`,
     project: project.rows[0],
     images: images.rows,
     videos: videos.rows,
+    partsList,
+    user: req.session.user,
   });
+};
+
+/** Add a project's parts to the cart: all of them, or the ones ticked. */
+exports.addPartsToCart = async (req, res) => {
+  const projectId = parseInt(req.params.id, 10);
+  if (isNaN(projectId)) return res.status(400).send("Invalid project ID");
+  try {
+    const { parts } = await getProjectParts(projectId);
+    const picked = [].concat(req.body.product_ids || []).map(Number);
+    const chosen = req.body.mode === "selected" ? parts.filter(p => picked.includes(p.id)) : parts;
+    if (!chosen.length) {
+      req.session.cartNotice = "No parts were selected.";
+      return res.redirect(`/projects/${projectId}#parts`);
+    }
+
+    const { added, skipped } = addItemsToCart(req, chosen.map(p => ({
+      product_id: p.id, quantity: p.quantity, name: p.name, image_url: p.image_url,
+      price: p.pricing.price, stock: p.stock,
+    })));
+
+    req.session.cartNotice = skipped.length
+      ? `Added ${added.length} part${added.length === 1 ? "" : "s"}. Not fully available: ${skipped.join(", ")}.`
+      : `All ${added.length} part${added.length === 1 ? "" : "s"} added to your cart.`;
+    res.redirect("/cart");
+  } catch (err) {
+    console.error("Add parts to cart failed:", err);
+    res.status(500).send("Server error");
+  }
 };
 
 

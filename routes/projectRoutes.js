@@ -43,6 +43,7 @@ router.get("/:id/book", isAuthenticated, user.showBookingForm);
 router.post("/:id/book", isAuthenticated, user.bookProject);
 
 // View existing project details
+router.post("/:id/parts/add", user.addPartsToCart);
 router.get("/:id", user.projectDetails);
 
 module.exports = router;

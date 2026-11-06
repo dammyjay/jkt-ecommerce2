@@ -361,6 +361,19 @@ async function initTables() {
       ) AS seed(name, states, fee, eta, is_default)
       WHERE NOT EXISTS (SELECT 1 FROM delivery_zones);
 
+      -- Project parts list: the components needed to build a project
+      CREATE TABLE IF NOT EXISTS project_parts (
+        id SERIAL PRIMARY KEY,
+        project_id INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+        note VARCHAR(120),
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (project_id, product_id)
+      );
+      CREATE INDEX IF NOT EXISTS project_parts_product_idx ON project_parts (product_id);
+
       -- Coupons can now give free delivery
       ALTER TABLE coupons DROP CONSTRAINT IF EXISTS coupons_discount_type_check;
       ALTER TABLE coupons ADD CONSTRAINT coupons_discount_type_check

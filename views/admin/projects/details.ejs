@@ -4,6 +4,92 @@
     <p><%- project.full_description %></p>
 
     <hr>
+    <!-- Parts list -->
+    <% const fmtN = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 }); %>
+    <style>
+      .ap-parts { background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 18px; margin: 16px 0 24px; }
+      .ap-parts h3 { margin: 0 0 4px; }
+      .ap-hint { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+      .ap-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+      .ap-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px minmax(0, 200px) auto auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #f0f0f0; }
+      .ap-row form { display: contents; }
+      .ap-row input { margin: 0; width: 100%; }
+      .ap-name { overflow-wrap: anywhere; }
+      .ap-name small { display: block; color: var(--muted); }
+      .ap-add { display: grid; grid-template-columns: minmax(0, 1fr) 80px minmax(0, 200px) auto; gap: 8px; align-items: end; margin-top: 14px; padding-top: 14px; border-top: 2px solid #eee; }
+      .ap-add label { font-size: 12px; font-weight: 500; display: block; margin-bottom: 4px; }
+      .ap-add input, .ap-add select { width: 100%; margin: 0; }
+      .ap-total { text-align: right; font-weight: 700; margin-top: 10px; }
+      @media (max-width: 700px) { .ap-row, .ap-add { grid-template-columns: minmax(0, 1fr) 80px; } }
+    </style>
+
+    <section class="ap-parts" id="parts">
+      <h3>🧰 Parts list</h3>
+      <p class="ap-hint">Products customers need to build this project. They appear on the project page with live prices and an "Add all to cart" button.</p>
+      <% if (typeof partsError !== "undefined" && partsError) { %><div class="ap-alert"><%= partsError %></div><% } %>
+
+      <% if (!partsList.parts.length) { %>
+        <p class="ap-hint" style="margin:0;">No parts yet. Add the first one below.</p>
+      <% } %>
+      <% partsList.parts.forEach(p => { %>
+        <div class="ap-row">
+          <div class="ap-name">
+            <a href="/products/<%= p.id %>" target="_blank"><%= p.name %></a>
+            <small><%= fmtN(p.pricing.price) %> each · stock <%= p.stock == null ? "—" : p.stock %><%= p.inStock ? "" : " ⚠️ not enough" %></small>
+          </div>
+          <form method="POST" action="/admin/projects/parts/<%= p.part_id %>/update">
+            <input type="hidden" name="project_id" value="<%= project.id %>">
+            <input type="number" name="quantity" min="1" value="<%= p.quantity %>" aria-label="Quantity">
+            <input type="text" name="note" maxlength="120" value="<%= p.note || '' %>" placeholder="Note (optional)">
+            <button class="btn btn-sm" type="submit">Save</button>
+          </form>
+          <form method="POST" action="/admin/projects/parts/<%= p.part_id %>/delete" onsubmit="return confirm('Remove <%= p.name.replace(/'/g, '') %> from the parts list?')">
+            <input type="hidden" name="project_id" value="<%= project.id %>">
+            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+          </form>
+        </div>
+      <% }) %>
+      <% if (partsList.parts.length) { %>
+        <div class="ap-total">Kit total at today's prices: <%= fmtN(partsList.total) %></div>
+      <% } %>
+
+      <form class="ap-add" method="POST" action="/admin/projects/<%= project.id %>/parts">
+        <div>
+          <label for="partSearch">Add product</label>
+          <input list="partProducts" id="partSearch" placeholder="Type to search products…" autocomplete="off">
+          <datalist id="partProducts">
+            <% products.forEach(pr => { %>
+              <option value="<%= pr.name %> (#<%= pr.id %>)"></option>
+            <% }) %>
+          </datalist>
+          <input type="hidden" name="product_id" id="partProduct">
+        </div>
+        <div>
+          <label>Qty</label>
+          <input type="number" name="quantity" min="1" value="1" required>
+        </div>
+        <div>
+          <label>Note</label>
+          <input type="text" name="note" maxlength="120" placeholder="e.g. any 5V version">
+        </div>
+        <button class="btn btn-primary" type="submit">Add part</button>
+      </form>
+      <script>
+        (() => {
+          // The datalist shows "Name (#id)"; send just the id
+          const search = document.getElementById("partSearch");
+          const hidden = document.getElementById("partProduct");
+          const sync = () => { const m = search.value.match(/\(#(\d+)\)\s*$/); hidden.value = m ? m[1] : ""; };
+          search.addEventListener("input", sync);
+          search.form.addEventListener("submit", e => {
+            sync();
+            if (!hidden.value) { e.preventDefault(); alert("Pick a product from the list."); }
+          });
+        })();
+      </script>
+    </section>
+
+    <hr>
     <h3>Gallery</h3>
 
     <!-- Upload Form -->

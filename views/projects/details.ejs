@@ -35,6 +35,96 @@
   </div>
 
 
+  <% if (typeof partsList !== "undefined" && partsList.parts.length) {
+       const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 }); %>
+    <style>
+      .pl-card { background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; margin: 28px 0; }
+      .pl-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+      .pl-head h3 { margin: 0; }
+      .pl-head p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+      .pl-row { display: grid; grid-template-columns: auto 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid #f0f0f0; }
+      .pl-row input[type=checkbox] { width: 18px; height: 18px; margin: 0; }
+      .pl-row img, .pl-row .pl-noimg { width: 56px; height: 56px; border-radius: 8px; background: #f6f6f6; object-fit: contain; padding: 4px; border: 1px solid #eee; }
+      .pl-name { color: var(--black); font-weight: 500; text-decoration: none; overflow-wrap: anywhere; }
+      .pl-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+      .pl-meta .out { color: var(--danger); font-weight: 600; }
+      .pl-meta .low { color: #b45309; font-weight: 600; }
+      .pl-price { text-align: right; white-space: nowrap; }
+      .pl-price s { display: block; font-size: 12px; color: var(--muted); }
+      .pl-row.unavailable { opacity: .55; }
+      .pl-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 2px solid #eee; padding-top: 14px; margin-top: 4px; }
+      .pl-total strong { font-size: 20px; }
+      .pl-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+      @media (max-width: 520px) { .pl-row { grid-template-columns: auto 44px minmax(0, 1fr); } .pl-row img, .pl-row .pl-noimg { width: 44px; height: 44px; } .pl-price { grid-column: 3; text-align: left; } }
+    </style>
+
+    <section class="pl-card" id="parts">
+      <div class="pl-head">
+        <div>
+          <h3>🧰 Parts for this project</h3>
+          <p><%= partsList.parts.length %> component<%= partsList.parts.length === 1 ? "" : "s" %> · everything you need to build it</p>
+        </div>
+      </div>
+
+      <form method="POST" action="/projects/<%= project.id %>/parts/add" id="partsForm">
+        <input type="hidden" name="mode" value="all" id="partsMode">
+        <% partsList.parts.forEach(p => { const pr = p.pricing; %>
+          <div class="pl-row <%= p.inStock ? '' : 'unavailable' %>">
+            <input type="checkbox" name="product_ids" value="<%= p.id %>" <%= p.inStock ? "checked" : "disabled" %> aria-label="Include <%= p.name %>">
+            <% if (p.image_url) { %><img src="<%= p.image_url %>" alt=""><% } else { %><span class="pl-noimg"></span><% } %>
+            <div>
+              <a class="pl-name" href="/products/<%= p.id %>"><%= p.quantity %> × <%= p.name %></a>
+              <div class="pl-meta">
+                <%= fmt(pr.price) %> each
+                <% if (pr.onSale) { %> · <span style="color:#15803d">-<%= pr.percentOff %>%</span><% } %>
+                <% if (!p.inStock) { %> · <span class="out"><%= Number(p.stock) > 0 ? "Only " + p.stock + " in stock" : "Out of stock" %></span>
+                <% } else if (p.stock != null && Number(p.stock) <= 5) { %> · <span class="low">Only <%= p.stock %> left</span><% } %>
+                <% if (p.note) { %> · <%= p.note %><% } %>
+              </div>
+            </div>
+            <div class="pl-price">
+              <strong><%= fmt(p.lineTotal) %></strong>
+              <% if (pr.onSale) { %><s><%= fmt(p.lineOriginal) %></s><% } %>
+            </div>
+          </div>
+        <% }) %>
+
+        <div class="pl-total">
+          <div>
+            <div style="font-size:13px; color:var(--muted);">Selected parts total</div>
+            <strong id="partsTotal"><%= fmt(partsList.parts.filter(p => p.inStock).reduce((s, p) => s + p.lineTotal, 0)) %></strong>
+            <% if (partsList.savings > 0) { %><div style="font-size:12px; color:#15803d;">You save <%= fmt(partsList.savings) %> with current deals</div><% } %>
+          </div>
+          <div class="pl-actions">
+            <button type="submit" class="btn btn-primary" id="addPartsBtn"><i class="fa-solid fa-cart-plus"></i> Add all to cart</button>
+          </div>
+        </div>
+        <% if (!partsList.allInStock) { %>
+          <p style="font-size:12px; color:var(--muted); margin:8px 0 0;">Parts out of stock are left out; you can still add the rest.</p>
+        <% } %>
+      </form>
+    </section>
+
+    <script>
+      (() => {
+        const form = document.getElementById("partsForm");
+        const boxes = [...form.querySelectorAll("input[name=product_ids]:not(:disabled)")];
+        const prices = <%- JSON.stringify(Object.fromEntries(partsList.parts.map(p => [p.id, p.lineTotal]))) %>;
+        const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+        const sync = () => {
+          const picked = boxes.filter(b => b.checked);
+          document.getElementById("partsTotal").textContent = fmt(picked.reduce((s, b) => s + prices[b.value], 0));
+          const all = picked.length === boxes.length;
+          document.getElementById("partsMode").value = all ? "all" : "selected";
+          const btn = document.getElementById("addPartsBtn");
+          btn.disabled = !picked.length;
+          btn.lastChild.textContent = all ? " Add all to cart" : ` Add ${picked.length} selected to cart`;
+        };
+        boxes.forEach(b => b.addEventListener("change", sync));
+      })();
+    </script>
+  <% } %>
+
   <a href="/projects/<%= project.id %>/book" class="btn">Book This Project</a>
 
   <!-- <form action="/projects/<%= project.id %>/book" method="POST">

@@ -62,6 +62,11 @@ router.post(
 
 router.post("/projects/milestones/create", isAdmin, admin.createMilestone);
 
+// Project parts list
+router.post("/projects/:id/parts", isAdmin, admin.addProjectPart);
+router.post("/projects/parts/:partId/update", isAdmin, admin.updateProjectPart);
+router.post("/projects/parts/:partId/delete", isAdmin, admin.deleteProjectPart);
+
 router.post("/projects/progress/update", isAdmin, admin.updateProgress);
 
 module.exports = router;

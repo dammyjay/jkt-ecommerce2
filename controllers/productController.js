@@ -1,6 +1,7 @@
 const pool = require("../utils/db");
 const cloudinary = require("../utils/cloudinary");
 const { withPricing } = require("../utils/pricing");
+const { projectsUsingProduct } = require("../utils/projectParts");
 
 // Normalise optional sale fields from the admin form
 function saleFields(body) {
@@ -179,6 +180,7 @@ exports.getProductById = async (req, res) => {
     res.render("public/detail", {
       product,
       relatedProducts: await withPricing(related.rows),
+      usedInProjects: await projectsUsingProduct(product.id),
       user: req.session.user,
 
       // ✅ Dynamic SEO

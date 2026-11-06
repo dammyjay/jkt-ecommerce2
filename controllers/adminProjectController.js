@@ -2,6 +2,7 @@ const pool = require("../utils/db");
 const sendEmail = require("../utils/sendEmail");
 const quotationTemplate = require("../utils/emailTemplates/projectQuotation");
 const cloudinary = require("../utils/cloudinary");
+const { getProjectParts } = require("../utils/projectParts");
 
 
 // 🧑‍💼 ADMIN: Create new project
@@ -295,11 +296,79 @@ exports.getProjectDetails = async (req, res) => {
     [projectId]
   );
 
+  const [partsList, productsRes] = await Promise.all([
+    getProjectParts(projectId),
+    pool.query("SELECT id, name, price, stock FROM products ORDER BY name ASC"),
+  ]);
+
+  const partsError = req.session.partsError || null;
+  delete req.session.partsError;
+
   res.render("admin/projects/details", {
     project: projectRes.rows[0],
     images: imagesRes.rows,
     videos: videosRes.rows,
+    partsList,
+    products: productsRes.rows,
+    partsError,
   });
+};
+
+// ---------- Parts list ----------
+
+const partsBack = (req, res, projectId, error) => {
+  if (error) req.session.partsError = error;
+  res.redirect(`/admin/projects/${projectId}#parts`);
+};
+
+// Add a product to a project's parts list (adding it again updates the quantity)
+exports.addProjectPart = async (req, res) => {
+  const projectId = parseInt(req.params.id, 10);
+  const productId = parseInt(req.body.product_id, 10);
+  const quantity = parseInt(req.body.quantity, 10);
+  const note = String(req.body.note || "").trim().slice(0, 120) || null;
+  if (!productId) return partsBack(req, res, projectId, "Choose a product to add.");
+  if (!(quantity > 0)) return partsBack(req, res, projectId, "Quantity must be at least 1.");
+  try {
+    await pool.query(
+      `INSERT INTO project_parts (project_id, product_id, quantity, note, sort_order)
+       VALUES ($1, $2, $3, $4, COALESCE((SELECT MAX(sort_order) + 1 FROM project_parts WHERE project_id = $1), 0))
+       ON CONFLICT (project_id, product_id) DO UPDATE SET quantity = EXCLUDED.quantity, note = EXCLUDED.note`,
+      [projectId, productId, quantity, note]
+    );
+    partsBack(req, res, projectId);
+  } catch (err) {
+    console.error("Error adding project part:", err);
+    partsBack(req, res, projectId, "Could not add that part.");
+  }
+};
+
+exports.updateProjectPart = async (req, res) => {
+  const partId = parseInt(req.params.partId, 10);
+  const quantity = parseInt(req.body.quantity, 10);
+  const note = String(req.body.note || "").trim().slice(0, 120) || null;
+  try {
+    const { rows } = await pool.query(
+      "UPDATE project_parts SET quantity = $2, note = $3 WHERE id = $1 AND $2 > 0 RETURNING project_id",
+      [partId, quantity, note]
+    );
+    const projectId = rows[0]?.project_id || parseInt(req.body.project_id, 10);
+    partsBack(req, res, projectId, rows.length ? null : "Quantity must be at least 1.");
+  } catch (err) {
+    console.error("Error updating project part:", err);
+    res.status(500).send("Server error");
+  }
+};
+
+exports.deleteProjectPart = async (req, res) => {
+  const partId = parseInt(req.params.partId, 10);
+  try {
+    const { rows } = await pool.query("DELETE FROM project_parts WHERE id = $1 RETURNING project_id", [partId]);
+    partsBack(req, res, rows[0]?.project_id || parseInt(req.body.project_id, 10));
+  } catch (err) {
+    console.error("Error removing project part:", err);
+    res.status(500).send("Server error");
+  }
 };
 
 // VIEW BOOKINGS (ADMIN)

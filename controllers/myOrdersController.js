@@ -2,6 +2,7 @@
 const pool = require("../utils/db");
 const paystack = require("../utils/paystack");
 const { loadOrder, bankDetails, payByDate } = require("../utils/orderService");
+const { addItemsToCart } = require("../utils/projectParts");
 
 // An order belongs to the logged-in customer if it was placed from their
 // account, or placed while logged out using their account email.
@@ -148,21 +149,7 @@ exports.reorder = async (req, res) => {
       [id]
     );
 
-    if (!req.session.cart) req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
-    const cart = req.session.cart;
-    const skipped = [];
-
-    for (const p of rows) {
-      const inCart = cart.items.find(i => i.product_id === p.product_id);
-      const already = inCart ? inCart.quantity : 0;
-      const available = p.stock == null ? Infinity : Math.max(Number(p.stock) - already, 0);
-      const qty = Math.min(p.quantity, available);
-      if (qty <= 0) { skipped.push(p.name); continue; }
-      if (inCart) inCart.quantity += qty;
-      // Price is refreshed by priceCart() when the cart is shown
-      else cart.items.push({ product_id: p.product_id, name: p.name, image_url: p.image_url, price: Number(p.price), original_price: Number(p.price), quantity: qty });
-      if (qty < p.quantity) skipped.push(`${p.name} (only ${qty} available)`);
-    }
+    const { skipped } = addItemsToCart(req, rows);
 
     req.session.cartNotice = skipped.length
       ? `Added to cart. Not fully available: ${skipped.join(", ")}.`
