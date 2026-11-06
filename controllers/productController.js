@@ -1,6 +1,6 @@
 const pool = require("../utils/db");
 const cloudinary = require("../utils/cloudinary");
-const { withPricing } = require("../utils/pricing");
+const { withPricing, getTiers } = require("../utils/pricing");
 const { projectsUsingProduct } = require("../utils/projectParts");
 
 // Normalise optional sale fields from the admin form
@@ -11,6 +11,41 @@ function saleFields(body) {
     body.sale_starts_at || null,
     body.sale_ends_at || null,
   ];
+}
+
+/**
+ * Replace a product's bulk price tiers from the admin form
+ * (tier_min[] / tier_price[]). Rows that are blank, below 2 pcs,
+ * not cheaper than the regular price, or duplicated are ignored.
+ */
+async function saveTiers(productId, regularPrice, body) {
+  const mins = [].concat(body.tier_min ?? []);
+  const prices = [].concat(body.tier_price ?? []);
+  const regular = Number(regularPrice);
+  const seen = new Set();
+  const tiers = [];
+  mins.forEach((m, i) => {
+    const min_qty = parseInt(m, 10);
+    const price = Number(prices[i]);
+    if (!(min_qty >= 2) || !(price > 0) || !(price < regular) || seen.has(min_qty)) return;
+    seen.add(min_qty);
+    tiers.push({ min_qty, price });
+  });
+
+  await pool.query("DELETE FROM product_price_tiers WHERE product_id = $1", [productId]);
+  for (const t of tiers.slice(0, 5)) {
+    await pool.query(
+      "INSERT INTO product_price_tiers (product_id, min_qty, price) VALUES ($1, $2, $3)",
+      [productId, t.min_qty, t.price]
+    );
+  }
+}
+
+/** Attach `tiers` [{min_qty, price}] to each product row. */
+async function withTiers(products) {
+  const map = await getTiers(products.map(p => p.id));
+  products.forEach(p => { p.tiers = map.get(p.id) || []; });
+  return products;
 }
 
 // 🛍️ Show all products (for users)
@@ -32,7 +67,7 @@ exports.getAllProducts = async (req, res) => {
       description: "View products at affordable prices on JKT E-Commerce",
       keywords: "online shopping, jkt, ecommerce",
       image: "/images/JKT logo bg.png",
-      products: await withPricing(products.rows),
+      products: await withTiers(await withPricing(products.rows)),
       categories: categories.rows,
       user: req.session.user
     });
@@ -62,7 +97,7 @@ exports.getAllProductsAdmin = async (req, res) => {
       description: "Manage products on JKT E-Commerce",
       keywords: "online shopping, jkt, ecommerce",
       image: "/images/JKT logo bg.png",
-      products: await withPricing(products.rows),
+      products: await withTiers(await withPricing(products.rows)),
       categories: categories.rows,
       user: req.session.user
     });
@@ -84,12 +119,14 @@ exports.createProduct = async (req, res) => {
           });
           ImageUrl = upload.secure_url || null;
         }
-    await pool.query(
+    const created = await pool.query(
       `INSERT INTO products
         (name, description, price, image_url, stock, category_id, sale_price, sale_starts_at, sale_ends_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
       [name, description, price, ImageUrl, stock, category_id, ...saleFields(req.body)]
     );
+    await saveTiers(created.rows[0].id, price, req.body);
     res.redirect("/products/admin/manage");
   } catch (err) {
     console.error("Error adding product:", err);
@@ -124,6 +161,7 @@ exports.updateProduct = async (req, res) => {
        WHERE id=$10`,
       [name, description, price, ImageUrl, stock, category_id, ...saleFields(req.body), id]
     );
+    await saveTiers(id, price, req.body);
     res.redirect("/products/admin/manage");
   } catch (err) {
     console.error("Error updating product:", err);
@@ -165,6 +203,7 @@ exports.getProductById = async (req, res) => {
 
     const product = result.rows[0];
     await withPricing([product]); // sets product.pricing
+    await withTiers([product]);   // sets product.tiers
 
     const related = await pool.query(
       `

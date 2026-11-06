@@ -112,6 +112,36 @@ async function withPricing(products) {
   return products;
 }
 
+// ---------- Volume (bulk) pricing ----------
+
+/** Map productId → tiers [{ min_qty, price }] sorted by min_qty. */
+async function getTiers(productIds) {
+  const map = new Map();
+  if (!productIds.length) return map;
+  const { rows } = await pool.query(
+    "SELECT product_id, min_qty, price FROM product_price_tiers WHERE product_id = ANY($1::int[]) ORDER BY min_qty",
+    [productIds]
+  );
+  rows.forEach(r => {
+    if (!map.has(r.product_id)) map.set(r.product_id, []);
+    map.get(r.product_id).push({ min_qty: Number(r.min_qty), price: round2(r.price) });
+  });
+  return map;
+}
+
+/**
+ * Unit price for a quantity. Bulk tiers and sales/campaigns never stack:
+ * the customer gets whichever unit price is lower.
+ * Returns { price, bulk } where bulk is the tier used (or null).
+ */
+function unitPriceFor(pricing, tiers = [], qty = 1) {
+  let best = { price: pricing.price, bulk: null };
+  for (const t of tiers) {
+    if (qty >= t.min_qty && t.price < best.price) best = { price: t.price, bulk: t };
+  }
+  return best;
+}
+
 /** Naira formatting used across views. */
 function formatNaira(n) {
   return "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
@@ -190,6 +220,7 @@ async function priceCart(req) {
     const { rows } = await pool.query("SELECT * FROM products WHERE id = ANY($1::int[])", [ids]);
     const byId = new Map(rows.map(p => [p.id, p]));
     const campaigns = await getActiveCampaigns();
+    const tiers = await getTiers(ids);
     const now = new Date();
 
     // Drop items whose product was deleted
@@ -197,13 +228,18 @@ async function priceCart(req) {
     cart.items.forEach(item => {
       const p = byId.get(item.product_id);
       const pr = getPricing(p, now, campaigns);
+      const productTiers = tiers.get(p.id) || [];
+      const unit = unitPriceFor(pr, productTiers, item.quantity);
+      // Next tier the customer could reach, for an "add N more" hint
+      const next = productTiers.find(t => t.min_qty > item.quantity && t.price < unit.price) || null;
       Object.assign(item, {
         name: p.name,
         image_url: p.image_url,
-        price: pr.price,
+        price: unit.price,
         original_price: pr.original,
-        on_sale: pr.onSale,
-        promo_label: pr.label,
+        on_sale: unit.price < pr.original,
+        promo_label: unit.bulk ? `Bulk ${unit.bulk.min_qty}+` : pr.label,
+        bulk_next: next && { min_qty: next.min_qty, price: next.price, add: next.min_qty - item.quantity },
       });
     });
   }
@@ -254,5 +290,7 @@ module.exports = {
   formatNaira,
   evaluateCoupon,
   priceCart,
+  getTiers,
+  unitPriceFor,
   round2,
 };

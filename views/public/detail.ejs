@@ -58,6 +58,14 @@
   .pd-title { font-size: clamp(22px, 3vw, 30px); line-height: 1.25; margin: 0; color: var(--black); overflow-wrap: anywhere; }
   .pd-price { font-size: 28px; font-weight: 700; color: var(--black); }
   .pd-save { font-size: 14px; font-weight: 600; color: #15803d; margin-top: -8px; }
+  .pd-tiers { border: 1px solid #e5e7eb; border-radius: var(--r-md); overflow: hidden; font-size: 14px; }
+  .pd-tiers-title { background: #f9fafb; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+  .pd-tier { display: grid; grid-template-columns: 1fr auto 80px; gap: 10px; padding: 7px 12px; border-top: 1px solid #f3f4f6; }
+  .pd-tier:first-of-type { border-top: 0; }
+  .pd-tier.active { background: rgba(134, 102, 15, .08); font-weight: 600; }
+  .pd-tier-save { color: #15803d; font-size: 12px; text-align: right; }
+  .pd-tier-live { padding: 8px 12px; background: #f0fdf4; color: #166534; font-size: 13px; border-top: 1px solid #dcfce7; }
+  .pd-wrap [hidden] { display: none !important; }
 
   .pd-stock { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
   .pd-stock::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
@@ -221,6 +229,24 @@
         <span class="pd-stock in">In stock</span>
       <% } %>
 
+      <% const tiers = (product.tiers || []).filter(t => t.price < pricing.price); %>
+      <% if (tiers.length) { %>
+        <div class="pd-tiers">
+          <div class="pd-tiers-title">📦 Buy more, save more</div>
+          <div class="pd-tier" data-min="1">
+            <span><%= tiers[0].min_qty === 2 ? "1 pc" : "1–" + (tiers[0].min_qty - 1) + " pcs" %></span><strong><%= fmt(pricing.price) %></strong><span></span>
+          </div>
+          <% tiers.forEach((t, i) => { const nxt = tiers[i + 1]; %>
+            <div class="pd-tier" data-min="<%= t.min_qty %>">
+              <span><%= t.min_qty %><%= nxt ? "–" + (nxt.min_qty - 1) : "+" %> pcs</span>
+              <strong><%= fmt(t.price) %></strong>
+              <span class="pd-tier-save">save <%= Math.round((1 - t.price / pricing.original) * 100) %>%</span>
+            </div>
+          <% }) %>
+          <div class="pd-tier-live" id="tierLive" hidden></div>
+        </div>
+      <% } %>
+
       <hr class="pd-divider">
 
       <form id="addToCartForm" class="pd-buy" method="POST" action="/cart/add/<%= product.id %>">
@@ -347,6 +373,27 @@
   qty.addEventListener("change", () => {
     qty.value = Math.min(Math.max(parseInt(qty.value) || 1, 1), maxQty);
   });
+
+  // Bulk pricing: highlight the tier for the chosen quantity and show the total
+  const tierRows = [...document.querySelectorAll(".pd-tier")];
+  if (tierRows.length) {
+    const prices = <%- JSON.stringify([{ min: 1, price: pricing.price }, ...((product.tiers || []).filter(t => t.price < pricing.price).map(t => ({ min: t.min_qty, price: t.price })))]) %>;
+    const naira = n => "₦" + Number(n).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+    const live = document.getElementById("tierLive");
+    const syncTier = () => {
+      const q = parseInt(qty.value) || 1;
+      let idx = 0;
+      prices.forEach((p, i) => { if (q >= p.min) idx = i; });
+      tierRows.forEach((r, i) => r.classList.toggle("active", i === idx));
+      const next = prices[idx + 1];
+      live.hidden = false;
+      live.textContent = `${q} × ${naira(prices[idx].price)} = ${naira(q * prices[idx].price)}` +
+        (next ? ` · add ${next.min - q} more to pay ${naira(next.price)} each` : "");
+    };
+    ["input", "change"].forEach(ev => qty.addEventListener(ev, syncTier));
+    form.querySelectorAll(".pd-qty button").forEach(b => b.addEventListener("click", syncTier));
+    syncTier();
+  }
 
   // Click-to-zoom image
   if (frame && document.getElementById("mainImage")) {

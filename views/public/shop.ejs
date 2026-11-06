@@ -59,6 +59,10 @@
           <p>
             <%- include('../partials/price', { pricing: product.pricing }) %>
           </p>
+          <% const bulk = (product.tiers || []).filter(t => t.price < product.pricing.price); %>
+          <% if (bulk.length) { const best = bulk[bulk.length - 1]; %>
+            <p style="font-size:12px; color:#1d4ed8; margin:-4px 0 0;">📦 From ₦<%= Number(best.price).toLocaleString("en-NG") %> each at <%= best.min_qty %>+ pcs</p>
+          <% } %>
 
           <a
             href="/products/<%= product.id %>"

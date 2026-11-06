@@ -1,7 +1,7 @@
 // Project parts list + adding several products to the session cart at once
 // (shared by "Add all to cart" on projects and "Buy these again" on orders).
 const pool = require("./db");
-const { withPricing, round2 } = require("./pricing");
+const { withPricing, round2, getTiers, unitPriceFor } = require("./pricing");
 
 /**
  * Add products to the session cart, capped to stock.
@@ -44,12 +44,21 @@ async function getProjectParts(projectId) {
     [projectId]
   );
   await withPricing(rows);
-  const parts = rows.map(r => ({
-    ...r,
-    inStock: r.stock == null || Number(r.stock) >= r.quantity,
-    lineTotal: round2(r.pricing.price * r.quantity),
-    lineOriginal: round2(r.pricing.original * r.quantity),
-  }));
+  const tiers = await getTiers(rows.map(r => r.id));
+  const parts = rows.map(r => {
+    // Bulk tier for the kit quantity (never stacks with a sale; lower price wins)
+    const unit = unitPriceFor(r.pricing, tiers.get(r.id) || [], r.quantity);
+    const pricing = unit.price < r.pricing.price
+      ? { ...r.pricing, price: unit.price, onSale: true, percentOff: Math.round((1 - unit.price / r.pricing.original) * 100), label: `Bulk ${unit.bulk.min_qty}+` }
+      : r.pricing;
+    return {
+      ...r,
+      pricing,
+      inStock: r.stock == null || Number(r.stock) >= r.quantity,
+      lineTotal: round2(pricing.price * r.quantity),
+      lineOriginal: round2(pricing.original * r.quantity),
+    };
+  });
   return {
     parts,
     total: round2(parts.reduce((s, p) => s + p.lineTotal, 0)),

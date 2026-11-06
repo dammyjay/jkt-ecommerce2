@@ -68,6 +68,13 @@
             <small class="sale-hint">Empty start = starts now. Empty end = runs until you remove it.</small>
           </fieldset>
 
+          <fieldset class="sale-fieldset">
+            <legend>📦 Bulk pricing <small>(optional)</small></legend>
+            <div class="tier-rows" data-tiers></div>
+            <button type="button" class="btn btn-sm" onclick="addTierRow(this.previousElementSibling)">+ Add tier</button>
+            <small class="sale-hint" style="display:block;">e.g. from 10 pcs ₦170 each, from 50 pcs ₦140 each. Must be below the regular price. Up to 5 tiers.</small>
+          </fieldset>
+
           <button type="submit" class="btn btn-primary btn-full">Upload Product</button>
         </form>
       </div>
@@ -159,6 +166,9 @@
               <td><%= product.category_name || 'Uncategorized' %></td>
               <td>
                 <%- include('../partials/price', { pricing: product.pricing }) %>
+                <% if (product.tiers && product.tiers.length) { %>
+                  <div style="font-size:11px; color:#1d4ed8;">📦 <%= product.tiers.map(t => t.min_qty + '+ ₦' + Number(t.price).toLocaleString()).join(' · ') %></div>
+                <% } %>
                 <% if (product.sale_price && !product.pricing.onSale) { %>
                   <div style="font-size:11px; color:#6b7280;">
                     Sale ₦<%= Number(product.sale_price).toLocaleString() %>
@@ -292,6 +302,13 @@
         <small class="sale-hint">Clear the sale price to end the sale.</small>
       </fieldset>
 
+      <fieldset class="sale-fieldset">
+        <legend>📦 Bulk pricing <small>(optional)</small></legend>
+        <div class="tier-rows" data-tiers id="editTiers"></div>
+        <button type="button" class="btn btn-sm" onclick="addTierRow(this.previousElementSibling)">+ Add tier</button>
+        <small class="sale-hint" style="display:block;">Must be below the regular price. Remove all rows to turn bulk pricing off.</small>
+      </fieldset>
+
       <button type="submit" class="btn btn-primary btn-full">Update Product</button>
     </form>
   </div>
@@ -362,6 +379,23 @@ ClassicEditor
 </script>
 
 <script>
+/* Bulk price tiers: rows of "from N pcs → ₦X each" */
+function addTierRow(container, tier) {
+  if (container.children.length >= 5) return alert("Up to 5 tiers per product.");
+  const row = document.createElement("div");
+  row.className = "tier-row";
+  row.innerHTML =
+    '<label>From</label><input type="number" name="tier_min" min="2" step="1" placeholder="10" required>' +
+    '<label>pcs, ₦</label><input type="number" name="tier_price" min="0.01" step="0.01" placeholder="170" required>' +
+    '<label>each</label><button type="button" class="icon-btn" title="Remove tier">✕</button>';
+  if (tier) {
+    row.querySelector('[name=tier_min]').value = tier.min_qty;
+    row.querySelector('[name=tier_price]').value = tier.price;
+  }
+  row.querySelector("button").onclick = () => row.remove();
+  container.appendChild(row);
+}
+
 /* Sale dates: show in admin's local time, submit as UTC ISO */
 function toLocalInput(value) {
   if (!value) return '';
@@ -430,6 +464,9 @@ document.getElementById('editForm').addEventListener('submit', function () {
   document.getElementById('editSalePrice').value = product.sale_price || '';
   document.getElementById('editSaleStarts').value = toLocalInput(product.sale_starts_at);
   document.getElementById('editSaleEnds').value = toLocalInput(product.sale_ends_at);
+  const tierBox = document.getElementById('editTiers');
+  tierBox.innerHTML = '';
+  (product.tiers || []).forEach(t => addTierRow(tierBox, t));
 
   if (product.image_url) {
     document.getElementById('editPreview').src = product.image_url;

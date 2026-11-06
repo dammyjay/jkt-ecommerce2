@@ -12,6 +12,7 @@
   .ct-img { width: 88px; height: 88px; border-radius: var(--r-md); background: #f6f6f6; border: 1px solid #eee; object-fit: contain; padding: 6px; }
   .ct-name { font-weight: 600; color: var(--black); text-decoration: none; overflow-wrap: anywhere; }
   .ct-unit { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .ct-bulk { font-size: 12px; color: #1d4ed8; margin-top: 4px; }
   .ct-controls { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
   .ct-qty { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; height: 36px; }
   .ct-qty button { width: 34px; border: 0; background: #f5f5f5; cursor: pointer; font-size: 16px; }
@@ -79,9 +80,10 @@
             <div>
               <a class="ct-name" href="/products/<%= item.product_id %>"><%= item.name %></a>
               <div class="ct-unit">
-                <%= fmt(item.price) %> each
-                <% if (item.on_sale) { %><span class="price-off" style="margin-left:6px"><%= item.promo_label || "SALE" %></span><% } %>
+                <span class="ct-unit-price"><%= fmt(item.price) %> each</span>
+                <span class="price-off ct-badge" style="margin-left:6px" <%= item.on_sale ? "" : "hidden" %>><%= item.promo_label || "SALE" %></span>
               </div>
+              <div class="ct-bulk" <%= item.bulk_next ? "" : "hidden" %>><%= item.bulk_next ? "Add " + item.bulk_next.add + " more to pay " + fmt(item.bulk_next.price) + " each" : "" %></div>
               <div class="ct-controls">
                 <div class="ct-qty">
                   <button type="button" data-step="-1" aria-label="Decrease">−</button>
@@ -195,6 +197,13 @@
       const orig = row.querySelector(".item-original");
       orig.hidden = !i.on_sale;
       orig.textContent = fmt(i.original_price * i.quantity);
+      row.querySelector(".ct-unit-price").textContent = fmt(i.price) + " each";
+      const badge = row.querySelector(".ct-badge");
+      badge.hidden = !i.on_sale;
+      badge.textContent = i.promo_label || "SALE";
+      const bulk = row.querySelector(".ct-bulk");
+      bulk.hidden = !i.bulk_next;
+      bulk.textContent = i.bulk_next ? "Add " + i.bulk_next.add + " more to pay " + fmt(i.bulk_next.price) + " each" : "";
     });
   }
 

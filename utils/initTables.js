@@ -374,6 +374,15 @@ async function initTables() {
       );
       CREATE INDEX IF NOT EXISTS project_parts_product_idx ON project_parts (product_id);
 
+      -- Volume pricing: unit price when buying at least min_qty
+      CREATE TABLE IF NOT EXISTS product_price_tiers (
+        id SERIAL PRIMARY KEY,
+        product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        min_qty INT NOT NULL CHECK (min_qty >= 2),
+        price NUMERIC(10,2) NOT NULL CHECK (price > 0),
+        UNIQUE (product_id, min_qty)
+      );
+
       -- Coupons can now give free delivery
       ALTER TABLE coupons DROP CONSTRAINT IF EXISTS coupons_discount_type_check;
       ALTER TABLE coupons ADD CONSTRAINT coupons_discount_type_check
