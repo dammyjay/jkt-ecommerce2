@@ -1,0 +1,174 @@
+<%
+  const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+  const safeJson = o => JSON.stringify(o).replace(/</g, "\\u003c").replace(/'/g, "\\u0027");
+  const unassigned = states.filter(s => !assigned[s]);
+%>
+
+<style>
+  .dz-info { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+  .dz-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+  .dz-states { font-size: 13px; text-align: left; overflow-wrap: anywhere; }
+  .dz-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; margin-left: 6px; }
+  .dz-actions { display: flex; gap: 6px; justify-content: center; }
+  .dz-actions form { margin: 0; }
+  .dz-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; }
+  .dz-form .full { grid-column: 1 / -1; }
+  .dz-form label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+  .dz-form input { width: 100%; }
+  .dz-form small { color: var(--muted); font-weight: 400; }
+  .dz-box { max-width: 720px !important; }
+  .dz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 10px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; max-height: 260px; overflow-y: auto; }
+  .dz-grid label { display: flex; align-items: center; gap: 6px; font-weight: 400; margin: 3px 0; cursor: pointer; font-size: 13px; }
+  .dz-grid input { width: auto; margin: 0; }
+  .dz-grid .taken { color: #9ca3af; }
+  .dz-grid .taken small { font-size: 10px; }
+  .dz-switch { display: flex; align-items: center; gap: 8px; }
+  .dz-switch input { width: auto; margin: 0; }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) { .dz-form { grid-template-columns: minmax(0, 1fr); } }
+</style>
+
+<div class="container">
+  <div class="card">
+    <div class="page-header" style="display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+      <h1>🚚 Delivery</h1>
+      <button class="btn btn-primary" onclick="openZone()">➕ New Zone</button>
+    </div>
+
+    <div class="dz-info">
+      Each zone covers a group of states. The <strong>default zone</strong> covers every state not listed in another zone.
+      Set a "free over" amount to offer free delivery on big orders. Customers can also use free-delivery coupons (Store → Coupons).
+      <br>Store pickup: <strong><%= pickup ? "On — " + pickup : "Off" %></strong>
+      <% if (!pickup) { %><span>(set <code>STORE_PICKUP_ADDRESS</code> in .env to offer free pickup)</span><% } %>
+    </div>
+
+    <% if (error) { %><div class="dz-alert"><%= error %></div><% } %>
+
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr><th>Zone</th><th>States</th><th>Fee</th><th>Free over</th><th>Delivery time</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <% zones.forEach(z => { %>
+            <tr style="<%= z.is_active ? '' : 'opacity:.5' %>">
+              <td style="text-align:left;"><strong><%= z.name %></strong><% if (z.is_default) { %><span class="dz-tag">Default</span><% } %><% if (!z.is_active) { %><div style="font-size:12px;">Disabled</div><% } %></td>
+              <td class="dz-states">
+                <% if (z.is_default) { %>
+                  All other states<% if (unassigned.length && unassigned.length <= 8) { %>: <%= unassigned.join(", ") %><% } else { %> (<%= unassigned.length %>)<% } %>
+                <% } else { %>
+                  <%= (z.states || []).join(", ") %>
+                <% } %>
+              </td>
+              <td><strong><%= Number(z.fee) > 0 ? fmt(z.fee) : "Free" %></strong></td>
+              <td><%= z.free_over != null ? fmt(z.free_over) : "—" %></td>
+              <td><%= z.eta || "—" %></td>
+              <td>
+                <div class="dz-actions">
+                  <button class="icon-btn" title="Edit" onclick='openZone(<%- safeJson(z) %>)'>✏️</button>
+                  <% if (!z.is_default) { %>
+                    <form method="POST" action="/admin/delivery/<%= z.id %>/delete" onsubmit="return confirm('Delete zone <%= z.name %>? Its states will use the default zone.')">
+                      <button class="icon-btn" title="Delete">🗑️</button>
+                    </form>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="zoneModal" class="modal">
+  <div class="modal-box dz-box">
+    <span class="close" onclick="closeZone()">&times;</span>
+    <h2 id="zoneTitle">New Zone</h2>
+    <form id="zoneForm" class="dz-form" method="POST" action="/admin/delivery/create">
+      <div class="full">
+        <label>Zone name</label>
+        <input type="text" name="name" id="zName" required maxlength="100" placeholder="e.g. South-West">
+      </div>
+      <div>
+        <label>Delivery fee (₦)</label>
+        <input type="number" name="fee" id="zFee" min="0" step="0.01" required>
+      </div>
+      <div>
+        <label>Free delivery over (₦) <small>optional</small></label>
+        <input type="number" name="free_over" id="zFreeOver" min="1" step="0.01" placeholder="No free delivery">
+      </div>
+      <div class="full">
+        <label>Delivery time shown to customers <small>optional</small></label>
+        <input type="text" name="eta" id="zEta" maxlength="60" placeholder="e.g. 2–3 business days">
+      </div>
+      <div class="full" id="zStatesWrap">
+        <label>States in this zone</label>
+        <div class="dz-grid">
+          <% states.forEach(s => { %>
+            <label data-state="<%= s %>" data-owner="<%= assigned[s] || '' %>">
+              <input type="checkbox" name="states" value="<%= s %>">
+              <span><%= s %></span>
+            </label>
+          <% }) %>
+        </div>
+      </div>
+      <div class="full" id="zDefaultNote" hidden style="font-size:13px; color:#6b7280;">
+        The default zone automatically covers every state not in another zone.
+      </div>
+      <div class="full dz-switch" id="zActiveWrap">
+        <input type="checkbox" name="is_active" id="zActive" checked>
+        <label for="zActive" style="margin:0">Active</label>
+      </div>
+      <div class="full">
+        <button type="submit" class="btn btn-primary btn-full" id="zSubmit">Create Zone</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  const modal = document.getElementById("zoneModal");
+  const form = document.getElementById("zoneForm");
+  const $ = id => document.getElementById(id);
+
+  window.openZone = (z) => {
+    const editing = !!z;
+    z = z || { states: [] };
+    form.reset();
+    form.action = editing ? `/admin/delivery/${z.id}/update` : "/admin/delivery/create";
+    $("zoneTitle").textContent = editing ? `Edit ${z.name}` : "New Zone";
+    $("zSubmit").textContent = editing ? "Save Changes" : "Create Zone";
+    $("zName").value = z.name || "";
+    $("zFee").value = z.fee != null ? Number(z.fee) : "";
+    $("zFreeOver").value = z.free_over != null ? Number(z.free_over) : "";
+    $("zEta").value = z.eta || "";
+    $("zActive").checked = editing ? !!z.is_active : true;
+    $("zStatesWrap").hidden = !!z.is_default;
+    $("zActiveWrap").hidden = !!z.is_default;
+    $("zDefaultNote").hidden = !z.is_default;
+
+    form.querySelectorAll(".dz-grid label").forEach(l => {
+      const cb = l.querySelector("input");
+      const owner = l.dataset.owner;
+      const mine = (z.states || []).includes(l.dataset.state);
+      cb.checked = mine;
+      // States owned by another zone are shown but locked
+      const taken = owner && !mine;
+      cb.disabled = taken;
+      l.classList.toggle("taken", taken);
+      const span = l.querySelector("span");
+      span.textContent = l.dataset.state;
+      if (taken) {
+        const small = document.createElement("small");
+        small.textContent = ` (${owner})`;
+        span.appendChild(small);
+      }
+    });
+    modal.classList.add("active");
+  };
+  window.closeZone = () => modal.classList.remove("active");
+  modal.addEventListener("click", e => { if (e.target === modal) closeZone(); });
+})();
+</script>

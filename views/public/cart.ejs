@@ -113,6 +113,11 @@
           <span id="sumDiscount">-<%= fmt(summary.discount) %></span>
         </div>
 
+        <div class="ct-row" style="color:var(--muted); font-size:14px;">
+          <span>Delivery</span>
+          <span id="sumDelivery"><%= summary.freeShipping ? "Free (coupon)" : "Calculated at checkout" %></span>
+        </div>
+
         <div class="ct-coupon">
           <div class="ct-coupon-applied" id="couponApplied" <%= summary.coupon ? "" : "hidden" %>>
             <span><i class="fa-solid fa-tag"></i> <strong id="appliedCode"><%= summary.coupon ? summary.coupon.code : "" %></strong> applied</span>
@@ -177,6 +182,7 @@
     $("couponForm").hidden = !!s.coupon;
     $("appliedCode").textContent = s.coupon ? s.coupon.code : "";
     $("couponPartial").hidden = !(s.coupon && s.coupon.partial);
+    $("sumDelivery").textContent = s.freeShipping ? "Free (coupon)" : "Calculated at checkout";
     const msg = $("couponMsg");
     if (s.couponError) { msg.textContent = s.couponError; msg.className = "ct-msg err"; }
     else if (msg.classList.contains("err")) { msg.textContent = ""; msg.className = "ct-msg"; }

@@ -54,6 +54,12 @@
       <% if (Number(order.discount_amount) > 0) { %>
         <div style="display:flex; justify-content:space-between; color:#15803d;"><span>Coupon (<%= order.coupon_code %>)</span><span>-<%= fmt(order.discount_amount) %></span></div>
       <% } %>
+      <% if (order.delivery_method) { %>
+        <div style="display:flex; justify-content:space-between;">
+          <span><%= order.delivery_method === "pickup" ? "Store pickup" : "Delivery (" + order.delivery_zone + ")" %></span>
+          <span><%= Number(order.delivery_fee) > 0 ? fmt(order.delivery_fee) : "Free" %></span>
+        </div>
+      <% } %>
       <div style="display:flex; justify-content:space-between; font-weight:700; font-size:18px; border-top:1px solid #eee; margin-top:10px; padding-top:10px;">
         <span><%= paid ? "Total paid" : "Total due" %></span><span><%= fmt(order.total_amount) %></span>
       </div>

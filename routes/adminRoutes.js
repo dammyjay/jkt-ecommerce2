@@ -19,6 +19,7 @@ const orderController = require("../controllers/orderController");
 const userController = require("../controllers/userController");
 const couponController = require("../controllers/couponController");
 const campaignController = require("../controllers/campaignController");
+const deliveryController = require("../controllers/deliveryController");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 
@@ -48,6 +49,12 @@ router.post("/promotions/create", isAdmin, upload.single("banner"), campaignCont
 router.post("/promotions/:id/update", isAdmin, upload.single("banner"), campaignController.update);
 router.post("/promotions/:id/toggle", isAdmin, campaignController.toggle);
 router.post("/promotions/:id/delete", isAdmin, campaignController.remove);
+
+// Delivery zones
+router.get("/delivery", isAdmin, deliveryController.list);
+router.post("/delivery/create", isAdmin, deliveryController.create);
+router.post("/delivery/:id/update", isAdmin, deliveryController.update);
+router.post("/delivery/:id/delete", isAdmin, deliveryController.remove);
 
 // Coupons
 router.get("/coupons", isAdmin, couponController.list);

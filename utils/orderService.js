@@ -97,11 +97,16 @@ function itemsTable(order) {
     ? `<tr><td style="padding:6px 0;color:#15803d">Coupon (${escapeHtml(order.coupon_code)})</td>
          <td style="padding:6px 0;text-align:right;color:#15803d">-${formatNaira(order.discount_amount)}</td></tr>`
     : "";
+  const delivery = order.delivery_method
+    ? `<tr><td style="padding:6px 0">${order.delivery_method === "pickup" ? "Store pickup" : `Delivery (${escapeHtml(order.delivery_zone)})`}</td>
+         <td style="padding:6px 0;text-align:right">${Number(order.delivery_fee) > 0 ? formatNaira(order.delivery_fee) : "Free"}</td></tr>`
+    : "";
   return `
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       ${rows}
       <tr><td style="padding:8px 0">Subtotal</td><td style="padding:8px 0;text-align:right">${formatNaira(order.subtotal_amount ?? order.total_amount)}</td></tr>
       ${discount}
+      ${delivery}
       <tr><td style="padding:8px 0;font-weight:700;font-size:16px">Total paid</td>
           <td style="padding:8px 0;text-align:right;font-weight:700;font-size:16px">${formatNaira(order.total_amount)}</td></tr>
     </table>`;

@@ -334,7 +334,39 @@ async function initTables() {
         -- Fulfilment tracking shown to customers
         ADD COLUMN IF NOT EXISTS status_note TEXT,
         ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+        ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ,
+        -- Delivery
+        ADD COLUMN IF NOT EXISTS delivery_method VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS delivery_zone VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS delivery_fee NUMERIC(10,2) DEFAULT 0;
+
+      -- Delivery zones: a zone covers a set of states. The default zone covers every
+      -- state not listed in another zone.
+      CREATE TABLE IF NOT EXISTS delivery_zones (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        states TEXT[] DEFAULT '{}',
+        fee NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (fee >= 0),
+        free_over NUMERIC(10,2),
+        eta VARCHAR(60),
+        is_default BOOLEAN DEFAULT false,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Starter zones on first run (edit them in Admin → Store → Delivery)
+      INSERT INTO delivery_zones (name, states, fee, eta, is_default)
+      SELECT * FROM (VALUES
+        ('Lagos', ARRAY['Lagos'], 2500::numeric, '1–2 business days', false),
+        ('Rest of Nigeria', '{}'::text[], 5000::numeric, '3–5 business days', true)
+      ) AS seed(name, states, fee, eta, is_default)
+      WHERE NOT EXISTS (SELECT 1 FROM delivery_zones);
+
+      -- Coupons can now give free delivery
+      ALTER TABLE coupons DROP CONSTRAINT IF EXISTS coupons_discount_type_check;
+      ALTER TABLE coupons ADD CONSTRAINT coupons_discount_type_check
+        CHECK (discount_type IN ('percent', 'fixed', 'free_shipping'));
+      ALTER TABLE coupons DROP CONSTRAINT IF EXISTS coupons_value_check;
+      ALTER TABLE coupons ADD CONSTRAINT coupons_value_check CHECK (value >= 0);
       CREATE UNIQUE INDEX IF NOT EXISTS orders_payment_reference_key
         ON orders (payment_reference) WHERE payment_reference IS NOT NULL;
 

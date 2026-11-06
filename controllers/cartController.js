@@ -2,6 +2,9 @@ const pool = require("../utils/db");
 const { getPricing, priceCart, evaluateCoupon, round2 } = require("../utils/pricing");
 const paystack = require("../utils/paystack");
 const {
+  NIGERIAN_STATES, normalizeState, pickupAddress, getZones, quoteDelivery, zonesForBrowser,
+} = require("../utils/delivery");
+const {
   loadOrder, markOrderPaid, bankDetails, payByDate, sendBankTransferPlacedEmails,
 } = require("../utils/orderService");
 
@@ -158,12 +161,28 @@ exports.getCheckout = async (req, res) => {
     const checkoutError = req.session.checkoutError || null;
     delete req.session.checkoutError;
 
+    // Keep what the customer typed if we bounced them back with an error
+    const form = { ...userData, ...(req.session.checkoutForm || {}) };
+    delete req.session.checkoutForm;
+    form.state = normalizeState(form.state) || "";
+
+    const zones = await getZones();
+    const method = form.delivery_method === "pickup" && pickupAddress() ? "pickup" : "delivery";
+    const delivery = quoteDelivery({
+      zones, state: form.state, method, subtotal: summary.subtotal, freeShippingCoupon: summary.freeShipping,
+    });
+
     res.render("public/checkout", {
       cart: req.session.cart,
       summary,
       checkoutError,
       paystackEnabled: paystack.isConfigured(),
-      user: userData,
+      user: form,
+      states: NIGERIAN_STATES,
+      zones: zonesForBrowser(zones),
+      pickup: pickupAddress(),
+      deliveryMethod: method,
+      delivery,
       title: "Checkout | JKT E-Commerce",
     });
   } catch (err) {
@@ -176,11 +195,13 @@ const PAYMENT_METHODS = ["paystack", "bank_transfer"];
 
 exports.placeOrder = async (req, res) => {
   const { fullname, email, phone, address, city, state, payment_method } = req.body;
+  const deliveryMethod = req.body.delivery_method === "pickup" ? "pickup" : "delivery";
   const summary = await priceCart(req);
   if (!summary.items.length) return res.redirect("/cart");
 
   const fail = msg => {
     req.session.checkoutError = msg;
+    req.session.checkoutForm = { fullname, email, phone, address, city, state, delivery_method: deliveryMethod };
     return res.redirect("/cart/checkout");
   };
 
@@ -217,8 +238,24 @@ exports.placeOrder = async (req, res) => {
     coupon = result.coupon;
     discount = result.discount;
   }
-  const total = round2(summary.subtotal - discount);
-  const fullAddress = [address, city, state].filter(Boolean).join(", ");
+
+  // Delivery fee is always recalculated here from the chosen state
+  const delivery = quoteDelivery({
+    zones: await getZones(),
+    state,
+    method: deliveryMethod,
+    subtotal: summary.subtotal,
+    freeShippingCoupon: coupon?.discount_type === "free_shipping",
+  });
+  if (!delivery.ok) return fail(delivery.error);
+  if (deliveryMethod === "delivery" && (!String(address || "").trim() || !String(city || "").trim())) {
+    return fail("Please enter your delivery address and city.");
+  }
+
+  const total = round2(summary.subtotal - discount + delivery.fee);
+  const fullAddress = deliveryMethod === "pickup"
+    ? `Store pickup — ${pickupAddress()}`
+    : [address, city, delivery.state].filter(Boolean).join(", ");
 
   // 1. Save the order as unpaid
   const client = await pool.connect();
@@ -228,11 +265,13 @@ exports.placeOrder = async (req, res) => {
     const order = await client.query(
       `INSERT INTO orders
         (user_id, customer_name, customer_phone, customer_email, address, payment_method,
-         subtotal_amount, discount_amount, coupon_code, total_amount, status, payment_status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending','unpaid')
+         subtotal_amount, discount_amount, coupon_code, total_amount, status, payment_status,
+         delivery_method, delivery_zone, delivery_fee)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending','unpaid',$11,$12,$13)
        RETURNING id`,
       [userId, fullname, phone, email, fullAddress, payment_method,
-       summary.subtotal, discount, coupon?.code || null, total]
+       summary.subtotal, discount, coupon?.code || null, total,
+       delivery.method, delivery.zone, delivery.fee]
     );
     orderId = order.rows[0].id;
     orderNumber = `ORD-${String(orderId).padStart(6, "0")}`;

@@ -21,6 +21,10 @@
   .co-row.total { font-size: 20px; font-weight: 700; border-top: 1px solid #eee; padding-top: 14px; }
   .co-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: var(--r-md); padding: 10px 14px; margin-bottom: 16px; }
   .co-edit { font-size: 13px; color: var(--primary-dark); }
+  .co-wrap [hidden] { display: none !important; }
+  .co-muted { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .co-eta { font-size: 13px; color: #166534; background: #f0fdf4; border-radius: 6px; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
+  .co-form select { height: 42px; }
   .co-pay { margin-top: 18px; display: grid; gap: 8px; }
   .co-pay-title { font-weight: 600; font-size: 14px; }
   .co-pay-opt {
@@ -52,6 +56,22 @@
     <div class="co-card">
       <h2>Shipping Details</h2>
       <form id="checkoutForm" class="co-form" method="POST" action="/cart/checkout">
+        <% if (pickup) { %>
+          <div class="full co-pay" style="margin:0 0 10px;">
+            <label class="co-pay-opt">
+              <input type="radio" name="delivery_method" value="delivery" <%= deliveryMethod === "delivery" ? "checked" : "" %>>
+              <span><strong>Deliver to me</strong><small>Fee depends on your state</small></span>
+              <i class="fa-solid fa-truck"></i>
+            </label>
+            <label class="co-pay-opt">
+              <input type="radio" name="delivery_method" value="pickup" <%= deliveryMethod === "pickup" ? "checked" : "" %>>
+              <span><strong>Pick up from our store — free</strong><small><%= pickup %></small></span>
+              <i class="fa-solid fa-store"></i>
+            </label>
+          </div>
+        <% } else { %>
+          <input type="hidden" name="delivery_method" value="delivery">
+        <% } %>
         <div class="full">
           <label>Full Name</label>
           <input type="text" name="fullname" value="<%= user.fullname || '' %>" required>
@@ -64,17 +84,26 @@
           <label>Phone Number</label>
           <input type="tel" name="phone" value="<%= user.phone || '' %>" required>
         </div>
-        <div class="full">
+        <div class="full delivery-only">
           <label>Address</label>
           <textarea name="address" rows="3" required><%= user.address || '' %></textarea>
         </div>
-        <div>
+        <div class="delivery-only">
           <label>City</label>
           <input type="text" name="city" value="<%= user.city || '' %>" required>
         </div>
-        <div>
+        <div class="delivery-only">
           <label>State</label>
-          <input type="text" name="state" value="<%= user.state || '' %>" required>
+          <select name="state" id="stateSelect" required style="width:100%">
+            <option value="">Select state</option>
+            <% states.forEach(s => { %>
+              <option value="<%= s %>" <%= user.state === s ? "selected" : "" %>><%= s %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="full delivery-only co-eta" id="deliveryEta" <%= delivery.ok && delivery.method === "delivery" ? "" : "hidden" %>>
+          <i class="fa-solid fa-truck-fast"></i>
+          <span id="deliveryEtaText"><%= delivery.ok ? `${delivery.zone}${delivery.eta ? " · " + delivery.eta : ""}` : "" %></span>
         </div>
       </form>
     </div>
@@ -102,12 +131,17 @@
       <% if (summary.saleSavings > 0) { %>
         <div class="co-row green"><span>Sale savings (included)</span><span>-<%= fmt(summary.saleSavings) %></span></div>
       <% } %>
-      <% if (summary.coupon) { %>
+      <% if (summary.coupon && !summary.freeShipping) { %>
         <div class="co-row green"><span>Coupon (<%= summary.coupon.code %>)</span><span>-<%= fmt(summary.discount) %></span></div>
       <% } else if (summary.couponError) { %>
         <div class="co-alert" style="font-size:13px">Coupon not applied: <%= summary.couponError %></div>
       <% } %>
-      <div class="co-row total"><span>Total</span><span><%= fmt(summary.total) %></span></div>
+      <div class="co-row">
+        <span>Delivery <small id="deliveryNote" class="co-muted"></small></span>
+        <span id="deliveryFee"><%= delivery.ok ? (delivery.fee ? fmt(delivery.fee) : "Free") : "Select state" %></span>
+      </div>
+      <div class="co-row green" id="freeDeliveryHint" hidden></div>
+      <div class="co-row total"><span>Total</span><span id="grandTotal"><%= fmt(summary.total + (delivery.ok ? delivery.fee : 0)) %></span></div>
 
       <% const payOnline = typeof paystackEnabled !== "undefined" && paystackEnabled; %>
       <div class="co-pay">
@@ -133,17 +167,66 @@
       </div>
 
       <button type="submit" form="checkoutForm" class="btn btn-primary btn-full" id="placeOrderBtn" style="margin-top: var(--s-md);">
-        <%= payOnline ? "Pay" : "Place Order" %> · <%= fmt(summary.total) %>
+        <%= payOnline ? "Pay" : "Place Order" %> · <%= fmt(summary.total + (delivery.ok ? delivery.fee : 0)) %>
       </button>
+      <p class="co-muted" style="font-size:12px; margin:8px 0 0; text-align:center;">Delivery fee is confirmed when you place the order.</p>
       <script>
         (() => {
-          const form = document.getElementById("checkoutForm");
-          const btn = document.getElementById("placeOrderBtn");
-          const label = () => {
+          // Preview only — the server recalculates delivery when the order is placed.
+          const ZONES = <%- JSON.stringify(zones).replace(/</g, "\\u003c") %>;
+          const ITEMS_TOTAL = <%= summary.total %>;
+          const SUBTOTAL = <%= summary.subtotal %>;
+          const FREE_SHIP_COUPON = <%= summary.freeShipping ? "true" : "false" %>;
+          const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+          const $ = id => document.getElementById(id);
+
+          const form = $("checkoutForm");
+          const btn = $("placeOrderBtn");
+          const stateSel = $("stateSelect");
+          let fee = null;
+
+          const method = () => (form.querySelector("input[name=delivery_method]:checked") || form.querySelector("input[name=delivery_method]")).value;
+
+          function quote() {
+            const hint = $("freeDeliveryHint");
+            hint.hidden = true;
+            $("deliveryNote").textContent = "";
+            if (method() === "pickup") { fee = 0; $("deliveryFee").textContent = "Free"; $("deliveryNote").textContent = "(store pickup)"; return; }
+            const st = stateSel.value;
+            if (!st) { fee = null; $("deliveryFee").textContent = "Select state"; $("deliveryEta").hidden = true; return; }
+            const zone = ZONES.find(z => !z.is_default && z.states.includes(st)) || ZONES.find(z => z.is_default);
+            if (!zone) { fee = null; $("deliveryFee").textContent = "Not available"; $("deliveryEta").hidden = true; return; }
+
+            fee = zone.fee;
+            if (fee > 0 && zone.free_over != null && SUBTOTAL >= zone.free_over) { fee = 0; $("deliveryNote").textContent = "(free over " + fmt(zone.free_over) + ")"; }
+            else if (fee > 0 && FREE_SHIP_COUPON) { fee = 0; $("deliveryNote").textContent = "(coupon)"; }
+            else if (fee > 0 && zone.free_over != null) {
+              hint.hidden = false;
+              hint.textContent = "Add " + fmt(zone.free_over - SUBTOTAL) + " more for free delivery to " + st;
+            }
+            $("deliveryFee").textContent = fee ? fmt(fee) : "Free";
+            $("deliveryEta").hidden = false;
+            $("deliveryEtaText").textContent = zone.name + (zone.eta ? " · " + zone.eta : "");
+          }
+
+          function render() {
+            const pickup = method() === "pickup";
+            form.querySelectorAll(".delivery-only").forEach(el => {
+              el.hidden = pickup;
+              el.querySelectorAll("input, textarea, select").forEach(f => (f.required = !pickup));
+            });
+            quote();
+            const total = ITEMS_TOTAL + (fee || 0);
+            $("grandTotal").textContent = fmt(total);
             const m = document.querySelector("input[name=payment_method]:checked");
-            btn.textContent = (m && m.value === "paystack" ? "Pay" : "Place Order") + " · <%= fmt(summary.total) %>";
-          };
-          document.querySelectorAll("input[name=payment_method]").forEach(r => r.addEventListener("change", label));
+            btn.textContent = (m && m.value === "paystack" ? "Pay" : "Place Order") + " · " + fmt(total);
+          }
+
+          stateSel.addEventListener("change", render);
+          form.querySelectorAll("input[name=delivery_method]").forEach(r => r.addEventListener("change", render));
+          document.querySelectorAll("input[name=payment_method]").forEach(r => r.addEventListener("change", render));
+          render();
+
           // Prevent double orders from double clicks
           form.addEventListener("submit", () => { btn.disabled = true; btn.textContent = "Please wait…"; });
         })();

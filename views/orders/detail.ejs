@@ -152,6 +152,12 @@
       <% if (Number(order.discount_amount) > 0) { %>
         <div class="od-row green"><span>Coupon (<%= order.coupon_code %>)</span><span>-<%= fmt(order.discount_amount) %></span></div>
       <% } %>
+      <% if (order.delivery_method) { %>
+        <div class="od-row">
+          <span><%= order.delivery_method === "pickup" ? "Store pickup" : "Delivery (" + order.delivery_zone + ")" %></span>
+          <span><%= Number(order.delivery_fee) > 0 ? fmt(order.delivery_fee) : "Free" %></span>
+        </div>
+      <% } %>
       <div class="od-row total"><span><%= paid ? "Total paid" : "Total" %></span><span><%= fmt(order.total_amount) %></span></div>
     </div>
   </div>

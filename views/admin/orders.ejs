@@ -38,6 +38,11 @@
                 <td><%= order.customer_name %></td>
                 <td>
                   ₦<%= order.total_amount ? Number(order.total_amount).toLocaleString('en-NG') : '—' %>
+                  <% if (order.delivery_method === "pickup") { %>
+                    <div style="font-size:11px; color:#6b7280;">🏬 Store pickup</div>
+                  <% } else if (order.delivery_method) { %>
+                    <div style="font-size:11px; color:#6b7280;">🚚 <%= order.delivery_zone %> · <%= Number(order.delivery_fee) > 0 ? "₦" + Number(order.delivery_fee).toLocaleString("en-NG") : "free" %></div>
+                  <% } %>
                   <% if (Number(order.discount_amount) > 0) { %>
                     <div style="font-size:11px; color:#15803d;"><%= order.coupon_code %> −₦<%= Number(order.discount_amount).toLocaleString('en-NG') %></div>
                   <% } %>

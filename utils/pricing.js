@@ -153,6 +153,11 @@ async function evaluateCoupon(code, subtotal, { items = null, userId = null, ema
     if (used.rows[0].n >= c.per_user_limit) return { error: "You have already used this coupon" };
   }
 
+  // Free-delivery coupons don't discount items; checkout waives the delivery fee
+  if (c.discount_type === "free_shipping") {
+    return { coupon: c, discount: 0, partial: false, freeShipping: true };
+  }
+
   // Which part of the cart the coupon can discount
   let eligible = subtotal;
   if (c.allow_with_sale === false && items) {
@@ -234,6 +239,8 @@ async function priceCart(req) {
     },
     couponError,
     discount,
+    freeShipping: coupon?.discount_type === "free_shipping",
+    // Items total. Delivery is added at checkout once the state is known.
     total: round2(subtotal - discount),
   };
 }

@@ -6,8 +6,8 @@ function couponParams(body) {
   return [
     String(body.code || "").trim().toUpperCase(),
     body.description || null,
-    body.discount_type === "fixed" ? "fixed" : "percent",
-    num(body.value),
+    ["fixed", "free_shipping"].includes(body.discount_type) ? body.discount_type : "percent",
+    body.discount_type === "free_shipping" ? 0 : num(body.value),
     num(body.min_order) || 0,
     num(body.max_discount),
     int(body.usage_limit),
@@ -22,7 +22,7 @@ function couponParams(body) {
 function validate(params) {
   const [code, , type, value] = params;
   if (!/^[A-Z0-9_-]{3,40}$/.test(code)) return "Code must be 3–40 letters, numbers, - or _";
-  if (!(value > 0)) return "Discount value must be greater than 0";
+  if (type !== "free_shipping" && !(value > 0)) return "Discount value must be greater than 0";
   if (type === "percent" && value > 100) return "Percentage cannot exceed 100";
   return null;
 }
