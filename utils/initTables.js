@@ -329,9 +329,19 @@ async function initTables() {
         ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20),
         ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100),
         ADD COLUMN IF NOT EXISTS payment_channel VARCHAR(30),
-        ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+        ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMPTZ;
       CREATE UNIQUE INDEX IF NOT EXISTS orders_payment_reference_key
         ON orders (payment_reference) WHERE payment_reference IS NOT NULL;
+
+      -- Orders belong to accounts in users2 (the table login uses). Older databases
+      -- still pointed this at the legacy "users" table, which rejected real customers.
+      -- NOT VALID: don't re-check historic rows, only new/updated ones.
+      -- SET NULL: deleting an account keeps its order history.
+      ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_user_id_fkey;
+      ALTER TABLE orders
+        ADD CONSTRAINT orders_user_id_fkey
+        FOREIGN KEY (user_id) REFERENCES users2(id) ON DELETE SET NULL NOT VALID;
 
       -- Automatic promo campaigns (no code needed)
       CREATE TABLE IF NOT EXISTS promo_campaigns (

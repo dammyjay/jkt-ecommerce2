@@ -11,11 +11,38 @@
       <h1 style="font-size:24px; margin:10px 0 6px;">Payment successful!</h1>
       <p style="color:var(--muted); margin:0 0 4px;">Thank you — we're preparing your order now.</p>
     <% } else { %>
-      <div style="font-size:48px; color:var(--primary-dark);"><i class="fa-solid fa-receipt"></i></div>
-      <h1 style="font-size:24px; margin:10px 0 6px;">Order placed — awaiting payment</h1>
-      <p style="color:var(--muted); margin:0 0 4px;">We'll contact you with our bank details. Your order ships once payment is confirmed.</p>
+      <div style="font-size:48px; color:var(--primary-dark);"><i class="fa-solid fa-building-columns"></i></div>
+      <h1 style="font-size:24px; margin:10px 0 6px;">Order reserved — complete your transfer</h1>
+      <p style="color:var(--muted); margin:0 0 4px;">Your order ships as soon as we confirm your payment.</p>
     <% } %>
     <p style="color:var(--muted); margin:0 0 20px;">Order number <strong style="color:var(--black)"><%= order.order_number %></strong></p>
+
+    <% if (!paid && typeof bank !== "undefined") { %>
+      <% if (bank) { %>
+        <div class="os-bank">
+          <div class="os-bank-amount">Transfer <strong><%= fmt(order.total_amount) %></strong> to</div>
+          <div class="os-bank-row"><span>Bank</span><strong><%= bank.bankName %></strong></div>
+          <div class="os-bank-row">
+            <span>Account number</span>
+            <strong class="os-acct"><%= bank.accountNumber %></strong>
+            <button type="button" class="os-copy" data-copy="<%= bank.accountNumber %>">Copy</button>
+          </div>
+          <div class="os-bank-row"><span>Account name</span><strong><%= bank.accountName %></strong></div>
+          <div class="os-bank-row">
+            <span>Narration</span>
+            <strong><%= order.order_number %></strong>
+            <button type="button" class="os-copy" data-copy="<%= order.order_number %>">Copy</button>
+          </div>
+          <p class="os-bank-note">
+            Use <strong><%= order.order_number %></strong> as the narration so we can match your payment.
+            Pay by <strong class="os-payby" data-date="<%= payBy.toISOString() %>"><%= payBy.toUTCString() %></strong>
+            or the order is cancelled automatically.
+          </p>
+        </div>
+      <% } else { %>
+        <div class="os-bank"><p class="os-bank-note" style="margin:0">We'll email you our bank details shortly.</p></div>
+      <% } %>
+    <% } %>
 
     <div style="text-align:left; border-top:1px solid #eee; padding-top:14px;">
       <% order.items.forEach(i => { %>
@@ -43,3 +70,26 @@
     <a href="/products" class="btn btn-primary" style="margin-top:20px;">Continue Shopping</a>
   </div>
 </div>
+
+<style>
+  .os-bank { text-align: left; background: #fafafa; border: 1px solid #eee; border-radius: var(--r-md); padding: 16px; margin: 0 0 20px; }
+  .os-bank-amount { font-size: 15px; margin-bottom: 10px; }
+  .os-bank-amount strong { font-size: 20px; }
+  .os-bank-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px dashed #e5e5e5; font-size: 14px; }
+  .os-bank-row span { color: var(--muted); }
+  .os-bank-row strong { overflow-wrap: anywhere; }
+  .os-acct { font-size: 18px; letter-spacing: .06em; }
+  .os-copy { border: 1px solid var(--border); background: #fff; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .os-bank-note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  @media (max-width: 420px) { .os-bank-row { grid-template-columns: minmax(0, 1fr) auto; } .os-bank-row span { grid-column: 1 / -1; } }
+</style>
+<script>
+  document.querySelectorAll(".os-copy").forEach(btn => btn.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copied ✓"; }
+    catch { btn.textContent = "Select & copy"; }
+    setTimeout(() => (btn.textContent = "Copy"), 2000);
+  }));
+  document.querySelectorAll(".os-payby").forEach(el => {
+    el.textContent = new Date(el.dataset.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  });
+</script>

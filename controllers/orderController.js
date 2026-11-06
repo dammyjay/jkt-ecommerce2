@@ -197,7 +197,7 @@ exports.adminCreateOrder = async (req, res) => {
 
       // 🔐 Verify user exists
       const userCheck = await pool.query(
-        "SELECT id FROM users WHERE id = $1",
+        "SELECT id FROM users2 WHERE id = $1",
         [user_id]
       );
 

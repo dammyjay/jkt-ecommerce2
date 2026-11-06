@@ -298,7 +298,10 @@ app.get("/test", (req, res) => {
 });
 
 // 🛠️ Run table creation on startup
-createTables();
+// Run migrations, then start background jobs that depend on them
+createTables().then(() => {
+  require("./utils/orderService").startOrderJobs();
+});
 
 // 🚀 Start Server
 const PORT = process.env.PORT || 3000;

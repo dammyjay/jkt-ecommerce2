@@ -1,7 +1,9 @@
 const pool = require("../utils/db");
 const { getPricing, priceCart, evaluateCoupon, round2 } = require("../utils/pricing");
 const paystack = require("../utils/paystack");
-const { loadOrder, markOrderPaid } = require("../utils/orderService");
+const {
+  loadOrder, markOrderPaid, bankDetails, payByDate, sendBankTransferPlacedEmails,
+} = require("../utils/orderService");
 
 function ensureCart(req) {
   if (!req.session.cart) req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
@@ -248,14 +250,18 @@ exports.placeOrder = async (req, res) => {
     client.release();
   }
 
-  // 2a. Bank transfer: done. Admin marks it paid when the money arrives.
+  // 2a. Bank transfer: show + email bank details. Admin marks it paid when the money arrives.
   if (payment_method === "bank_transfer") {
     req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
     delete req.session.couponCode;
+    const order = await loadOrder(orderId);
+    sendBankTransferPlacedEmails(order).catch(err => console.error("Bank transfer emails failed:", err.message));
     return res.render("public/orderSuccess", {
       title: "Order Placed | JKT E-Commerce",
       user: req.session.user,
-      order: await loadOrder(orderId),
+      order,
+      bank: bankDetails(),
+      payBy: payByDate(order),
     });
   }
 
