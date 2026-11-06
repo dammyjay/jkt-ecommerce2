@@ -1,5 +1,7 @@
 const pool = require("../utils/db");
 const { getPricing, priceCart, evaluateCoupon, round2 } = require("../utils/pricing");
+const paystack = require("../utils/paystack");
+const { loadOrder, markOrderPaid } = require("../utils/orderService");
 
 function ensureCart(req) {
   if (!req.session.cart) req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
@@ -155,6 +157,7 @@ exports.getCheckout = async (req, res) => {
       cart: req.session.cart,
       summary,
       checkoutError,
+      paystackEnabled: paystack.isConfigured(),
       user: userData,
       title: "Checkout | JKT E-Commerce",
     });
@@ -164,46 +167,70 @@ exports.getCheckout = async (req, res) => {
   }
 };
 
+const PAYMENT_METHODS = ["paystack", "bank_transfer"];
+
 exports.placeOrder = async (req, res) => {
   const { fullname, email, phone, address, city, state, payment_method } = req.body;
   const summary = await priceCart(req);
   if (!summary.items.length) return res.redirect("/cart");
 
+  const fail = msg => {
+    req.session.checkoutError = msg;
+    return res.redirect("/cart/checkout");
+  };
+
+  if (!PAYMENT_METHODS.includes(payment_method)) return fail("Please choose a payment method.");
+  if (payment_method === "paystack" && !paystack.isConfigured()) {
+    return fail("Card payment is temporarily unavailable. Please choose bank transfer.");
+  }
+
+  // Make sure everything is still in stock before taking money
+  const stock = await pool.query(
+    "SELECT id, name, stock FROM products WHERE id = ANY($1::int[])",
+    [summary.items.map(i => i.product_id)]
+  );
+  const byId = new Map(stock.rows.map(p => [p.id, p]));
+  for (const item of summary.items) {
+    const p = byId.get(item.product_id);
+    if (p && p.stock != null && Number(p.stock) < item.quantity) {
+      return fail(Number(p.stock) > 0
+        ? `Only ${p.stock} of "${p.name}" left. Please update your cart.`
+        : `"${p.name}" just sold out. Please remove it from your cart.`);
+    }
+  }
+
   const userId = req.session.user?.id || null;
+  let coupon = null, discount = 0;
+  if (req.session.couponCode) {
+    const result = await evaluateCoupon(req.session.couponCode, summary.subtotal, {
+      items: summary.items, userId, email,
+    });
+    if (result.error) {
+      delete req.session.couponCode;
+      return fail(`Coupon removed: ${result.error}`);
+    }
+    coupon = result.coupon;
+    discount = result.discount;
+  }
+  const total = round2(summary.subtotal - discount);
+  const fullAddress = [address, city, state].filter(Boolean).join(", ");
+
+  // 1. Save the order as unpaid
   const client = await pool.connect();
+  let orderId, orderNumber;
   try {
     await client.query("BEGIN");
-
-    // Re-validate coupon inside the transaction with a row lock so usage limits hold
-    let coupon = null, discount = 0;
-    if (req.session.couponCode) {
-      const result = await evaluateCoupon(req.session.couponCode, summary.subtotal, {
-        items: summary.items, userId, email, client, lock: true,
-      });
-      if (result.error) {
-        await client.query("ROLLBACK");
-        delete req.session.couponCode;
-        req.session.checkoutError = `Coupon removed: ${result.error}`;
-        return res.redirect("/cart/checkout");
-      }
-      coupon = result.coupon;
-      discount = result.discount;
-    }
-
-    const total = round2(summary.subtotal - discount);
-    const fullAddress = [address, city, state].filter(Boolean).join(", ");
-
     const order = await client.query(
       `INSERT INTO orders
         (user_id, customer_name, customer_phone, customer_email, address, payment_method,
-         subtotal_amount, discount_amount, coupon_code, total_amount, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending')
+         subtotal_amount, discount_amount, coupon_code, total_amount, status, payment_status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending','unpaid')
        RETURNING id`,
       [userId, fullname, phone, email, fullAddress, payment_method,
        summary.subtotal, discount, coupon?.code || null, total]
     );
-    const orderId = order.rows[0].id;
-    const orderNumber = `ORD-${String(orderId).padStart(6, "0")}`;
+    orderId = order.rows[0].id;
+    orderNumber = `ORD-${String(orderId).padStart(6, "0")}`;
     await client.query("UPDATE orders SET order_number = $1 WHERE id = $2", [orderNumber, orderId]);
 
     for (const item of summary.items) {
@@ -212,33 +239,123 @@ exports.placeOrder = async (req, res) => {
         [orderId, item.product_id, item.quantity, item.price]
       );
     }
-
-    if (coupon) {
-      await client.query("UPDATE coupons SET used_count = used_count + 1 WHERE id = $1", [coupon.id]);
-      await client.query(
-        `INSERT INTO coupon_redemptions (coupon_id, order_id, user_id, email, discount_amount)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [coupon.id, orderId, userId, email, discount]
-      );
-    }
-
     await client.query("COMMIT");
-
-    req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
-    delete req.session.couponCode;
-
-    res.render("public/orderSuccess", {
-      title: "Order Placed | JKT E-Commerce",
-      user: req.session.user,
-      orderNumber,
-      summary: { ...summary, discount, total, coupon: coupon && { code: coupon.code } },
-      payment_method,
-    });
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
     console.error("Error placing order:", err);
-    res.status(500).send("Could not place your order. Please try again.");
+    return fail("Could not place your order. Please try again.");
   } finally {
     client.release();
+  }
+
+  // 2a. Bank transfer: done. Admin marks it paid when the money arrives.
+  if (payment_method === "bank_transfer") {
+    req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
+    delete req.session.couponCode;
+    return res.render("public/orderSuccess", {
+      title: "Order Placed | JKT E-Commerce",
+      user: req.session.user,
+      order: await loadOrder(orderId),
+    });
+  }
+
+  // 2b. Paystack: send the customer to pay. The cart is kept until payment succeeds.
+  try {
+    const reference = `${orderNumber}-${Date.now().toString(36)}`.toUpperCase();
+    const base = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+    const tx = await paystack.initializeTransaction({
+      email,
+      amount: total,
+      reference,
+      callbackUrl: `${base}/cart/payment/callback`,
+      metadata: { order_id: orderId, order_number: orderNumber },
+    });
+    await pool.query("UPDATE orders SET payment_reference = $1 WHERE id = $2", [reference, orderId]);
+    req.session.pendingOrderId = orderId;
+    req.session.save(() => res.redirect(tx.authorization_url));
+  } catch (err) {
+    console.error("Paystack initialize failed:", err.message);
+    await pool.query("UPDATE orders SET payment_status = 'failed' WHERE id = $1", [orderId]);
+    fail("We couldn't start the payment. Please try again or choose bank transfer.");
+  }
+};
+
+/**
+ * Confirm a Paystack payment with Paystack itself (never trust the browser)
+ * and mark the matching order paid. Used by the redirect and the webhook.
+ */
+async function confirmPaystackPayment(reference) {
+  const { rows } = await pool.query("SELECT * FROM orders WHERE payment_reference = $1", [reference]);
+  const order = rows[0];
+  if (!order) return { ok: false, reason: "Order not found" };
+  if (order.payment_status === "paid") return { ok: true, orderId: order.id };
+
+  const tx = await paystack.verifyTransaction(reference);
+  const expectedKobo = Math.round(Number(order.total_amount) * 100);
+
+  if (tx.status !== "success") {
+    if (["failed", "abandoned", "reversed"].includes(tx.status)) {
+      await pool.query(
+        "UPDATE orders SET payment_status = 'failed' WHERE id = $1 AND payment_status IS DISTINCT FROM 'paid'",
+        [order.id]
+      );
+    }
+    return { ok: false, orderId: order.id, reason: tx.gateway_response || tx.status };
+  }
+  if (Number(tx.amount) !== expectedKobo || tx.currency !== "NGN") {
+    console.error(`⚠️ Amount mismatch on ${reference}: paid ${tx.amount} ${tx.currency}, expected ${expectedKobo} NGN`);
+    await pool.query("UPDATE orders SET payment_status = 'review' WHERE id = $1", [order.id]);
+    return { ok: false, orderId: order.id, reason: "Payment amount did not match the order. Our team will contact you." };
+  }
+
+  await markOrderPaid(order.id, { reference, channel: tx.channel });
+  return { ok: true, orderId: order.id };
+}
+exports.confirmPaystackPayment = confirmPaystackPayment;
+
+exports.paymentCallback = async (req, res) => {
+  const reference = String(req.query.reference || req.query.trxref || "");
+  if (!reference) return res.redirect("/cart");
+
+  try {
+    const result = await confirmPaystackPayment(reference);
+    if (result.ok) {
+      if (req.session.pendingOrderId === result.orderId) {
+        req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
+        delete req.session.couponCode;
+        delete req.session.pendingOrderId;
+      }
+      return res.render("public/orderSuccess", {
+        title: "Payment Successful | JKT E-Commerce",
+        user: req.session.user,
+        order: await loadOrder(result.orderId),
+      });
+    }
+    req.session.checkoutError =
+      `Payment was not completed${result.reason ? ` (${result.reason})` : ""}. Your cart is saved, so you can try again.`;
+    res.redirect("/cart/checkout");
+  } catch (err) {
+    console.error("Payment callback error:", err);
+    req.session.checkoutError =
+      "We couldn't confirm your payment yet. If you were charged, we'll confirm it shortly and email you.";
+    res.redirect("/cart/checkout");
+  }
+};
+
+/** Paystack server-to-server notification. Needs the raw request body. */
+exports.paystackWebhook = async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !paystack.isValidWebhook(req.body, req.get("x-paystack-signature"))) {
+    return res.sendStatus(401);
+  }
+  res.sendStatus(200); // acknowledge fast; Paystack retries otherwise
+
+  try {
+    const event = JSON.parse(req.body.toString("utf8"));
+    if (event.event === "charge.success" && event.data?.reference) {
+      const result = await confirmPaystackPayment(event.data.reference);
+      if (!result.ok) console.warn("Webhook payment not confirmed:", event.data.reference, result.reason);
+    }
+  } catch (err) {
+    console.error("Paystack webhook error:", err);
   }
 };

@@ -21,6 +21,16 @@
   .co-row.total { font-size: 20px; font-weight: 700; border-top: 1px solid #eee; padding-top: 14px; }
   .co-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: var(--r-md); padding: 10px 14px; margin-bottom: 16px; }
   .co-edit { font-size: 13px; color: var(--primary-dark); }
+  .co-pay { margin-top: 18px; display: grid; gap: 8px; }
+  .co-pay-title { font-weight: 600; font-size: 14px; }
+  .co-pay-opt {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px; cursor: pointer; margin: 0;
+  }
+  .co-pay-opt:has(input:checked) { border-color: var(--primary-dark); background: rgba(134, 102, 15, .06); }
+  .co-pay-opt input { width: auto; margin: 0; }
+  .co-pay-opt small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+  .co-pay-opt i { color: var(--muted); }
 
   @media (max-width: 900px) {
     .co-layout { grid-template-columns: minmax(0, 1fr); }
@@ -99,17 +109,45 @@
       <% } %>
       <div class="co-row total"><span>Total</span><span><%= fmt(summary.total) %></span></div>
 
-      <label style="margin-top: var(--s-md); display:block;">Payment Option</label>
-      <select name="payment_method" form="checkoutForm" required style="width:100%">
-        <option value="">Select Payment</option>
-        <option value="paystack">Paystack</option>
-        <option value="paypal">PayPal</option>
-        <option value="stripe">Stripe</option>
-      </select>
+      <% const payOnline = typeof paystackEnabled !== "undefined" && paystackEnabled; %>
+      <div class="co-pay">
+        <div class="co-pay-title">Payment method</div>
+        <% if (payOnline) { %>
+          <label class="co-pay-opt">
+            <input type="radio" name="payment_method" value="paystack" form="checkoutForm" checked required>
+            <span>
+              <strong>Pay online now</strong>
+              <small>Card, bank transfer or USSD — secured by Paystack</small>
+            </span>
+            <i class="fa-solid fa-lock"></i>
+          </label>
+        <% } %>
+        <label class="co-pay-opt">
+          <input type="radio" name="payment_method" value="bank_transfer" form="checkoutForm" <%= payOnline ? "" : "checked" %> required>
+          <span>
+            <strong>Manual bank transfer</strong>
+            <small>We'll send our account details; your order ships once payment is confirmed</small>
+          </span>
+          <i class="fa-solid fa-building-columns"></i>
+        </label>
+      </div>
 
-      <button type="submit" form="checkoutForm" class="btn btn-primary btn-full" style="margin-top: var(--s-md);">
-        Place Order · <%= fmt(summary.total) %>
+      <button type="submit" form="checkoutForm" class="btn btn-primary btn-full" id="placeOrderBtn" style="margin-top: var(--s-md);">
+        <%= payOnline ? "Pay" : "Place Order" %> · <%= fmt(summary.total) %>
       </button>
+      <script>
+        (() => {
+          const form = document.getElementById("checkoutForm");
+          const btn = document.getElementById("placeOrderBtn");
+          const label = () => {
+            const m = document.querySelector("input[name=payment_method]:checked");
+            btn.textContent = (m && m.value === "paystack" ? "Pay" : "Place Order") + " · <%= fmt(summary.total) %>";
+          };
+          document.querySelectorAll("input[name=payment_method]").forEach(r => r.addEventListener("change", label));
+          // Prevent double orders from double clicks
+          form.addEventListener("submit", () => { btn.disabled = true; btn.textContent = "Please wait…"; });
+        })();
+      </script>
     </aside>
 
   </div>

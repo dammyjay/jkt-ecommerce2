@@ -11,8 +11,9 @@ router.post("/remove", cartController.removeItem);
 router.post("/coupon", cartController.applyCoupon);
 router.post("/coupon/remove", cartController.removeCoupon);
 
-// Checkout
+// Checkout & payment
 router.get("/checkout", cartController.getCheckout);
 router.post("/checkout", cartController.placeOrder);
+router.get("/payment/callback", cartController.paymentCallback);
 
 module.exports = router;

@@ -593,3 +593,15 @@ exports.downloadInvoice = async (req, res) => {
 //     stream.pipe(res);
 //   });
 // };
+// Admin: confirm a bank transfer (or any manual payment).
+// Reduces stock, records coupon use and emails the customer — same as an online payment.
+exports.markPaid = async (req, res) => {
+  try {
+    const { markOrderPaid } = require("../utils/orderService");
+    await markOrderPaid(parseInt(req.params.id, 10), { channel: "manual" });
+    res.redirect("/orders/admin/manage");
+  } catch (err) {
+    console.error("Error marking order paid:", err);
+    res.status(500).send("Server error");
+  }
+};

@@ -20,6 +20,14 @@ dotenv.config();
 
 const app = express();
 
+// 💳 Paystack webhook — must come before express.json() so the signature
+// can be checked against the exact raw body Paystack sent.
+app.post(
+  "/payment/paystack/webhook",
+  express.raw({ type: "application/json", limit: "1mb" }),
+  require("./controllers/cartController").paystackWebhook
+);
+
 // 🧩 Middleware
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));

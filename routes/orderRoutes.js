@@ -37,6 +37,7 @@ router.post(
 );
 
 router.post("/admin/:id/update", isAdmin, orderController.updateOrderStatus);
+router.post("/admin/:id/mark-paid", isAdmin, orderController.markPaid);
 router.post("/admin/:id/delete", isAdmin, orderController.deleteOrder);
 router.get(
   "/admin/:id",

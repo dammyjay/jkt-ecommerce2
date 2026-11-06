@@ -15,6 +15,7 @@
               <th>ID</th>
               <th>Customer</th>
               <th>Total</th>
+              <th>Payment</th>
               <th>Status</th>
               <th>Issued By</th>
               <th>Date</th>
@@ -22,10 +23,38 @@
             </tr>
           </thead>
           <tbody>
-            <% orders.forEach(order => { %>
+            <% orders.forEach(order => {
+                 const ps = order.payment_status;
+                 const badge = {
+                   paid:   ["Paid", "#15803d", "#f0fdf4"],
+                   unpaid: ["Unpaid", "#b45309", "#fffbeb"],
+                   failed: ["Failed", "#b91c1c", "#fef2f2"],
+                   review: ["Check amount", "#b91c1c", "#fef2f2"],
+                 }[ps] || ["—", "#6b7280", "transparent"];
+            %>
+              <tr>
                 <td><%= order.order_number %></td>
-                <td><%= order.user_id ? order.customer_name : order.customer_name %></td>
-                <td>₦<%= order.total_amount || '—' %></td>
+                <td><%= order.customer_name %></td>
+                <td>
+                  ₦<%= order.total_amount ? Number(order.total_amount).toLocaleString('en-NG') : '—' %>
+                  <% if (Number(order.discount_amount) > 0) { %>
+                    <div style="font-size:11px; color:#15803d;"><%= order.coupon_code %> −₦<%= Number(order.discount_amount).toLocaleString('en-NG') %></div>
+                  <% } %>
+                </td>
+                <td>
+                  <span style="font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; color:<%= badge[1] %>; background:<%= badge[2] %>; white-space:nowrap;"><%= badge[0] %></span>
+                  <div style="font-size:11px; color:#6b7280; margin-top:3px;">
+                    <%= order.payment_method === 'paystack' ? 'Paystack' + (order.payment_channel ? ' · ' + order.payment_channel : '')
+                      : order.payment_method === 'bank_transfer' ? 'Bank transfer' : '' %>
+                  </div>
+                  <% if (ps !== 'paid') { %>
+                    <form method="POST" action="/orders/admin/<%= order.id %>/mark-paid"
+                          onsubmit="return confirm('Confirm you received ₦<%= Number(order.total_amount || 0).toLocaleString('en-NG') %> for <%= order.order_number %>? This reduces stock and emails the customer.')"
+                          style="margin-top:4px;">
+                      <button class="btn btn-sm" type="submit">Mark paid</button>
+                    </form>
+                  <% } %>
+                </td>
                  <td>
                   <form method="POST" action="/orders/admin/<%= order.id %>/update">
                     <select

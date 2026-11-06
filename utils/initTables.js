@@ -324,6 +324,15 @@ async function initTables() {
       ALTER TABLE coupons
         ADD COLUMN IF NOT EXISTS allow_with_sale BOOLEAN DEFAULT true;
 
+      -- Online payments (Paystack). NULL = older orders created before payments existed.
+      ALTER TABLE orders
+        ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS payment_channel VARCHAR(30),
+        ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+      CREATE UNIQUE INDEX IF NOT EXISTS orders_payment_reference_key
+        ON orders (payment_reference) WHERE payment_reference IS NOT NULL;
+
       -- Automatic promo campaigns (no code needed)
       CREATE TABLE IF NOT EXISTS promo_campaigns (
         id SERIAL PRIMARY KEY,
