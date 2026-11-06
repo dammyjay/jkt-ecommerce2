@@ -158,6 +158,135 @@ async function sendOrderEmails(order) {
   await Promise.allSettled(jobs);
 }
 
+// ---------- Fulfilment status ----------
+
+const STATUSES = ["pending", "processing", "shipped", "completed", "cancelled"];
+
+/**
+ * Admin changes an order's status. Records timeline dates, restores stock if a
+ * paid order is cancelled (and takes it again if it's un-cancelled), then emails
+ * the customer. `note` is an optional message, e.g. courier + tracking number.
+ */
+async function changeOrderStatus(orderId, status, note) {
+  if (!STATUSES.includes(status)) {
+    const err = new Error("Invalid status");
+    err.status = 400;
+    throw err;
+  }
+  note = String(note || "").trim().slice(0, 500) || null;
+
+  const client = await pool.connect();
+  let before, after;
+  try {
+    await client.query("BEGIN");
+    const cur = await client.query(
+      "SELECT * FROM orders WHERE id = $1 AND deleted IS NOT TRUE FOR UPDATE",
+      [orderId]
+    );
+    before = cur.rows[0];
+    if (!before) {
+      await client.query("ROLLBACK");
+      const err = new Error("Order not found");
+      err.status = 404;
+      throw err;
+    }
+    if (before.status === status && !note) {
+      await client.query("ROLLBACK");
+      return { changed: false };
+    }
+
+    const upd = await client.query(
+      `UPDATE orders SET
+         status = $2,
+         status_note = COALESCE($3, CASE WHEN status = $2 THEN status_note ELSE NULL END),
+         shipped_at = CASE WHEN $2 IN ('shipped', 'completed') THEN COALESCE(shipped_at, NOW()) ELSE shipped_at END,
+         delivered_at = CASE WHEN $2 = 'completed' THEN COALESCE(delivered_at, NOW()) ELSE delivered_at END
+       WHERE id = $1
+       RETURNING *`,
+      [orderId, status, note]
+    );
+    after = upd.rows[0];
+
+    // Paid orders already took stock. Give it back on cancel; take it again if revived.
+    if (before.payment_status === "paid" && before.status !== status) {
+      const sign = status === "cancelled" ? 1 : before.status === "cancelled" ? -1 : 0;
+      if (sign) {
+        await client.query(
+          `UPDATE products p
+             SET stock = GREATEST(COALESCE(p.stock, 0) + $2 * oi.qty, 0)
+           FROM (SELECT product_id, SUM(quantity) AS qty FROM order_items WHERE order_id = $1 GROUP BY product_id) oi
+           WHERE p.id = oi.product_id`,
+          [orderId, sign]
+        );
+      }
+    }
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  if (before.status !== status || note) {
+    const full = await loadOrder(orderId);
+    sendStatusEmail(full, before.status).catch(err => console.error("Status email failed:", err.message));
+  }
+  return { changed: true, order: after };
+}
+
+const STATUS_EMAILS = {
+  processing: {
+    subject: o => `We're preparing your order ${o.order_number}`,
+    title: "Your order is being prepared",
+    body: "Good news — we're picking and packing your items now. We'll let you know as soon as it ships.",
+  },
+  shipped: {
+    subject: o => `Your order ${o.order_number} is on the way 🚚`,
+    title: "Your order has shipped",
+    body: "Your order has left our store and is on its way to you.",
+  },
+  completed: {
+    subject: o => `Order ${o.order_number} delivered`,
+    title: "Your order has been delivered",
+    body: "We hope you love your components! If anything isn't right, just reply to this email and we'll help.",
+  },
+  cancelled: {
+    subject: o => `Order ${o.order_number} has been cancelled`,
+    title: "Your order has been cancelled",
+    body: "Your order has been cancelled.",
+  },
+};
+
+async function sendStatusEmail(order, previousStatus) {
+  const tpl = STATUS_EMAILS[order.status];
+  if (!tpl || !order.customer_email) return;
+  // Paying already sends "we're preparing your order" — don't repeat it.
+  if (order.status === "processing" && previousStatus === "pending" && order.paid_at &&
+      Date.now() - new Date(order.paid_at).getTime() < 5 * 60 * 1000) return;
+
+  const base = process.env.BASE_URL || "";
+  let extra = "";
+  if (order.status === "cancelled" && order.payment_status === "paid") {
+    extra = `<p>You paid <strong>${formatNaira(order.total_amount)}</strong> for this order. We'll contact you about your refund — or reply to this email if you have any questions.</p>`;
+  }
+  const note = order.status_note
+    ? `<div style="background:#fafafa;border-left:3px solid #6f520c;padding:10px 14px;margin:14px 0;white-space:pre-wrap">${escapeHtml(order.status_note)}</div>`
+    : "";
+
+  await sendEmail(
+    order.customer_email,
+    tpl.subject(order),
+    wrap(tpl.title, `
+      <p>Hi ${escapeHtml(order.customer_name || "there")},</p>
+      <p>${tpl.body}</p>
+      ${note}
+      ${extra}
+      <p style="font-size:14px">Order <strong>${escapeHtml(order.order_number)}</strong> · ${formatNaira(order.total_amount)}</p>
+      <p><a href="${base}/orders/${order.id}" style="display:inline-block;background:#6f520c;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Track your order</a></p>`)
+  );
+}
+
 // ---------- Bank transfer ----------
 
 const PAY_WINDOW_HOURS = Number(process.env.BANK_TRANSFER_HOURS) || 48;
@@ -318,6 +447,8 @@ function startOrderJobs(intervalMs = 15 * 60 * 1000) {
 module.exports = {
   loadOrder,
   markOrderPaid,
+  changeOrderStatus,
+  STATUSES,
   bankDetails,
   payByDate,
   sendBankTransferPlacedEmails,

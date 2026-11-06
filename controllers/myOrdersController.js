@@ -7,12 +7,16 @@ const { loadOrder, bankDetails, payByDate } = require("../utils/orderService");
 // account, or placed while logged out using their account email.
 const OWNER_SQL = "(o.user_id = $1 OR ($2::text IS NOT NULL AND LOWER(o.customer_email) = LOWER($2)))";
 
-/** What the customer sees: label, colours, and where the order is on the timeline (0–3). */
+/**
+ * What the customer sees: label, colours, and where the order is on the timeline
+ * (0 placed, 1 paid, 2 processing, 3 shipped, 4 delivered; -1 cancelled).
+ */
 function customerStatus(o) {
   const paid = o.payment_status === "paid";
-  if (o.payment_status === "expired") return { label: "Cancelled — not paid", color: "#6b7280", bg: "#f3f4f6", step: -1 };
+  if (o.status === "cancelled" && o.payment_status === "expired") return { label: "Cancelled — not paid", color: "#6b7280", bg: "#f3f4f6", step: -1 };
   if (o.status === "cancelled") return { label: "Cancelled", color: "#6b7280", bg: "#f3f4f6", step: -1 };
-  if (o.status === "completed") return { label: "Completed", color: "#15803d", bg: "#f0fdf4", step: 3 };
+  if (o.status === "completed") return { label: "Delivered", color: "#15803d", bg: "#f0fdf4", step: 4 };
+  if (o.status === "shipped") return { label: "Shipped", color: "#7c3aed", bg: "#f5f3ff", step: 3 };
   if (o.payment_status === "review") return { label: "Payment under review", color: "#b45309", bg: "#fffbeb", step: 0 };
   if (paid || o.status === "processing") return { label: "Processing", color: "#1d4ed8", bg: "#eff6ff", step: paid ? 2 : 0 };
   if (o.payment_status === "failed") return { label: "Payment failed", color: "#b91c1c", bg: "#fef2f2", step: 0 };

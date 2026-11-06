@@ -156,18 +156,16 @@ exports.getOrderForEdit = async (req, res) => {
 };
 
 // Admin update status
+// Admin: change fulfilment status. Emails the customer and keeps stock right
+// when a paid order is cancelled (or un-cancelled).
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-    await pool.query(
-      "UPDATE orders SET status = $1 WHERE id = $2 AND deleted IS NOT TRUE",
-      [status, id]
-    );
+    const { changeOrderStatus } = require("../utils/orderService");
+    await changeOrderStatus(parseInt(req.params.id, 10), req.body.status, req.body.note);
     res.redirect("/orders/admin/manage");
   } catch (error) {
     console.error("Error updating order:", error);
-    res.status(500).send("Server error");
+    res.status(error.status || 500).send(error.status ? error.message : "Server error");
   }
 };
 

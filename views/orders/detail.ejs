@@ -8,7 +8,8 @@
     { label: "Order placed", at: order.created_at },
     { label: "Payment confirmed", at: order.paid_at },
     { label: "Processing", at: null },
-    { label: "Completed", at: null },
+    { label: "Shipped", at: order.shipped_at },
+    { label: "Delivered", at: order.delivered_at },
   ];
 %>
 
@@ -23,7 +24,9 @@
   .od-card h2 { font-size: 17px; margin: 0 0 14px; }
   .od-flash { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; }
 
-  .od-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); position: relative; }
+  .od-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: relative; }
+  .od-note { background: #fafafa; border-left: 3px solid var(--primary-dark); padding: 10px 14px; margin-top: 16px; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .od-note small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 2px; }
   .od-step { text-align: center; position: relative; padding-top: 34px; font-size: 13px; }
   .od-step::before {
     content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
@@ -92,6 +95,9 @@
           </div>
         <% }) %>
       </div>
+    <% } %>
+    <% if (order.status_note) { %>
+      <div class="od-note"><small>Message from JKT</small><%= order.status_note %></div>
     <% } %>
   </div>
 

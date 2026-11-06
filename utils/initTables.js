@@ -330,7 +330,11 @@ async function initTables() {
         ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100),
         ADD COLUMN IF NOT EXISTS payment_channel VARCHAR(30),
         ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMPTZ;
+        ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMPTZ,
+        -- Fulfilment tracking shown to customers
+        ADD COLUMN IF NOT EXISTS status_note TEXT,
+        ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
       CREATE UNIQUE INDEX IF NOT EXISTS orders_payment_reference_key
         ON orders (payment_reference) WHERE payment_reference IS NOT NULL;
 

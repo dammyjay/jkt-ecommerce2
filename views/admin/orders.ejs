@@ -57,26 +57,25 @@
                   <% } %>
                 </td>
                  <td>
-                  <form method="POST" action="/orders/admin/<%= order.id %>/update">
+                  <form method="POST" action="/orders/admin/<%= order.id %>/update" class="status-form">
+                    <input type="hidden" name="note">
                     <select
                       name="status"
-                      onchange="this.form.submit()"
+                      data-current="<%= order.status %>"
+                      data-paid="<%= order.payment_status === 'paid' ? '1' : '' %>"
+                      data-order="<%= order.order_number %>"
+                      onchange="submitStatus(this)"
                       <%= order.status === 'completed' ? 'disabled' : '' %>
                     >
-                      <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>
-                        Pending
-                      </option>
-                      <option value="processing" <%= order.status === 'processing' ? 'selected' : '' %>>
-                        Processing
-                      </option>
-                      <option value="completed" <%= order.status === 'completed' ? 'selected' : '' %>>
-                        Completed
-                      </option>
-                      <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>
-                        Cancelled
-                      </option>
+                      <% [['pending','Pending'],['processing','Processing'],['shipped','Shipped'],['completed','Completed'],['cancelled','Cancelled']].forEach(([v, l]) => { %>
+                        <option value="<%= v %>" <%= order.status === v ? 'selected' : '' %>><%= l %></option>
+                      <% }) %>
+                      <% if (order.status === 'deleted') { %><option selected disabled>Deleted</option><% } %>
                     </select>
                   </form>
+                  <% if (order.status_note) { %>
+                    <div style="font-size:11px; color:#6b7280; margin-top:4px; max-width:180px; overflow-wrap:anywhere;" title="Note sent to customer">📝 <%= order.status_note %></div>
+                  <% } %>
                 </td>
 
                 <td><%= order.issued_by_name || '—' %></td>
@@ -369,6 +368,30 @@ function editOrder(orderId) {
 
     qty.addEventListener('input', calculate);
     price.addEventListener('input', calculate);
+  }
+
+  // Status change: confirm, optionally attach a note for the customer, then submit.
+  function submitStatus(select) {
+    const status = select.value;
+    const current = select.dataset.current;
+    const order = select.dataset.order;
+    const form = select.form;
+    const emails = ["processing", "shipped", "completed", "cancelled"].includes(status);
+
+    let note = "";
+    if (status === "shipped") {
+      note = prompt(`${order} → Shipped\n\nOptional note for the customer (courier, tracking number, expected delivery):`, "");
+      if (note === null) { select.value = current; return; }
+    } else if (status === "cancelled") {
+      const restock = select.dataset.paid ? "\n\nThis order was paid: its items will be put back in stock and the customer told a refund will follow." : "";
+      note = prompt(`Cancel ${order}?${restock}\n\nOptional reason for the customer:`, "");
+      if (note === null) { select.value = current; return; }
+    } else if (emails && !confirm(`Change ${order} to "${select.options[select.selectedIndex].text}"?\n\nThe customer will be emailed.`)) {
+      select.value = current;
+      return;
+    }
+    form.querySelector("input[name=note]").value = note || "";
+    form.submit();
   }
 
   function openDeleteOrderModal(id, label) {
