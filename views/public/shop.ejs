@@ -35,6 +35,9 @@
           class="card product-card"
           data-category="<%= product.category_id %>"
         >
+          <% if (product.pricing.onSale) { %>
+            <span class="sale-ribbon">SALE -<%= product.pricing.percentOff %>%</span>
+          <% } %>
           <img
             src="<%= product.image_url %>"
             alt="<%= product.name %>"
@@ -53,8 +56,8 @@
             <%= product.category_name %>
           </p>
 
-          <p style="font-weight: 600;">
-            ₦<%= product.price.toLocaleString() %>
+          <p>
+            <%- include('../partials/price', { pricing: product.pricing }) %>
           </p>
 
           <a

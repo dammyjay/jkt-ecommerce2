@@ -49,6 +49,25 @@
           <label>Stock</label>
           <input type="number" name="stock" required>
 
+          <fieldset class="sale-fieldset">
+            <legend>🏷️ Sale / Promo price <small>(optional)</small></legend>
+            <label>Sale Price (₦)</label>
+            <input type="number" step="0.01" min="0" name="sale_price" placeholder="Leave empty for no sale">
+            <div class="sale-dates">
+              <div>
+                <label>Starts</label>
+                <input type="datetime-local" data-iso="sale_starts_at">
+                <input type="hidden" name="sale_starts_at">
+              </div>
+              <div>
+                <label>Ends</label>
+                <input type="datetime-local" data-iso="sale_ends_at">
+                <input type="hidden" name="sale_ends_at">
+              </div>
+            </div>
+            <small class="sale-hint">Empty start = starts now. Empty end = runs until you remove it.</small>
+          </fieldset>
+
           <button type="submit" class="btn btn-primary btn-full">Upload Product</button>
         </form>
       </div>
@@ -138,7 +157,15 @@
 
               <td><%= product.name %></td>
               <td><%= product.category_name || 'Uncategorized' %></td>
-              <td>₦<%= product.price %></td>
+              <td>
+                <%- include('../partials/price', { pricing: product.pricing }) %>
+                <% if (product.sale_price && !product.pricing.onSale) { %>
+                  <div style="font-size:11px; color:#6b7280;">
+                    Sale ₦<%= Number(product.sale_price).toLocaleString() %>
+                    <%= product.sale_starts_at && new Date(product.sale_starts_at) > new Date() ? '(scheduled)' : '(ended)' %>
+                  </div>
+                <% } %>
+              </td>
               <td><%= product.stock %></td>
 
               <td>
@@ -246,6 +273,25 @@
       <label>Stock</label>
       <input type="number" name="stock" id="editStock" required>
 
+      <fieldset class="sale-fieldset">
+        <legend>🏷️ Sale / Promo price <small>(optional)</small></legend>
+        <label>Sale Price (₦)</label>
+        <input type="number" step="0.01" min="0" name="sale_price" id="editSalePrice" placeholder="Leave empty for no sale">
+        <div class="sale-dates">
+          <div>
+            <label>Starts</label>
+            <input type="datetime-local" data-iso="sale_starts_at" id="editSaleStarts">
+            <input type="hidden" name="sale_starts_at">
+          </div>
+          <div>
+            <label>Ends</label>
+            <input type="datetime-local" data-iso="sale_ends_at" id="editSaleEnds">
+            <input type="hidden" name="sale_ends_at">
+          </div>
+        </div>
+        <small class="sale-hint">Clear the sale price to end the sale.</small>
+      </fieldset>
+
       <button type="submit" class="btn btn-primary btn-full">Update Product</button>
     </form>
   </div>
@@ -316,6 +362,21 @@ ClassicEditor
 </script>
 
 <script>
+/* Sale dates: show in admin's local time, submit as UTC ISO */
+function toLocalInput(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+document.querySelectorAll('#createModal form, #editForm').forEach(form => {
+  form.addEventListener('submit', () => {
+    form.querySelectorAll('[data-iso]').forEach(input => {
+      const hidden = form.querySelector(`input[type=hidden][name="${input.dataset.iso}"]`);
+      hidden.value = input.value ? new Date(input.value).toISOString() : '';
+    });
+  });
+});
+
 /* CREATE PRODUCT FORM */
 document.querySelector('#createModal form').addEventListener('submit', function () {
   if (createEditor) {
@@ -366,6 +427,9 @@ document.getElementById('editForm').addEventListener('submit', function () {
   document.getElementById('editPrice').value = product.price;
   document.getElementById('editStock').value = product.stock;
   document.getElementById('editCategory').value = product.category_id || '';
+  document.getElementById('editSalePrice').value = product.sale_price || '';
+  document.getElementById('editSaleStarts').value = toLocalInput(product.sale_starts_at);
+  document.getElementById('editSaleEnds').value = toLocalInput(product.sale_ends_at);
 
   if (product.image_url) {
     document.getElementById('editPreview').src = product.image_url;
@@ -414,8 +478,12 @@ document.getElementById('editForm').addEventListener('submit', function () {
     document.getElementById('viewId').innerText = '#' + product.id;
     document.getElementById('viewName').innerText = product.name;
     document.getElementById('viewCategory').innerText = product.category_name || 'Uncategorized';
-    document.getElementById('viewPrice').innerText =
-      '₦' + Number(product.price).toLocaleString('en-NG', { maximumFractionDigits: 2 });
+    const naira = n => '₦' + Number(n).toLocaleString('en-NG', { maximumFractionDigits: 2 });
+    const pr = product.pricing || {};
+    document.getElementById('viewPrice').innerHTML = pr.onSale
+      ? `${naira(pr.price)} <s style="color:#6b7280;font-size:16px;font-weight:400">${naira(pr.original)}</s>
+         <span class="price-off">-${pr.percentOff}%</span>`
+      : naira(product.price);
     document.getElementById('viewStock').innerText =
       stock > 0 ? `${stock} in stock` : 'Out of stock';
     document.getElementById('viewStock').style.color = stock > 0 ? '#15803d' : 'var(--danger)';

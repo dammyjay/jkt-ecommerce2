@@ -1,316 +1,248 @@
-<!-- <div class="cart-container">
+<% const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 }); %>
+
+<style>
+  .ct-wrap [hidden] { display: none !important; }
+  .ct-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+  .ct-wrap h1 { margin: 0 0 20px; font-size: 26px; }
+  .ct-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+
+  .ct-items { background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+  .ct-item { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 16px; padding: 18px 20px; border-bottom: 1px solid #eee; align-items: center; }
+  .ct-item:last-child { border-bottom: 0; }
+  .ct-img { width: 88px; height: 88px; border-radius: var(--r-md); background: #f6f6f6; border: 1px solid #eee; object-fit: contain; padding: 6px; }
+  .ct-name { font-weight: 600; color: var(--black); text-decoration: none; overflow-wrap: anywhere; }
+  .ct-unit { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .ct-controls { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+  .ct-qty { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; height: 36px; }
+  .ct-qty button { width: 34px; border: 0; background: #f5f5f5; cursor: pointer; font-size: 16px; }
+  .ct-qty input { width: 46px; border: 0; text-align: center; margin: 0; padding: 0; -moz-appearance: textfield; appearance: textfield; }
+  .ct-qty input::-webkit-inner-spin-button, .ct-qty input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .ct-remove { border: 0; background: none; color: var(--danger); cursor: pointer; font-size: 13px; padding: 0; }
+  .ct-line { font-weight: 700; text-align: right; white-space: nowrap; }
+  .ct-line s { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+
+  .ct-summary { background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; position: sticky; top: 20px; }
+  .ct-summary h2 { font-size: 18px; margin: 0 0 16px; }
+  .ct-row { display: flex; justify-content: space-between; gap: 12px; margin: 10px 0; font-size: 15px; }
+  .ct-row.green { color: #15803d; }
+  .ct-row.total { font-size: 20px; font-weight: 700; border-top: 1px solid #eee; padding-top: 14px; margin-top: 14px; }
+
+  .ct-coupon { margin: 16px 0; }
+  .ct-coupon form { display: flex; gap: 8px; }
+  .ct-coupon input { flex: 1; min-width: 0; text-transform: uppercase; margin: 0; height: 42px; }
+  .ct-coupon button { height: 42px; padding: 0 16px; border: 0; border-radius: var(--r-md); background: var(--black); color: #fff; cursor: pointer; font-weight: 600; }
+  .ct-coupon-applied { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #f0fdf4; border: 1px dashed #86efac; color: #166534; border-radius: var(--r-md); padding: 10px 12px; font-size: 14px; }
+  .ct-coupon-applied button { background: none; border: 0; color: var(--danger); cursor: pointer; font-size: 13px; }
+  .ct-msg { font-size: 13px; margin-top: 8px; min-height: 1em; }
+  .ct-msg.err { color: var(--danger); }
+  .ct-msg.ok { color: #15803d; }
+
+  .ct-checkout { display: block; text-align: center; width: 100%; height: 48px; line-height: 48px; border-radius: var(--r-md); background: var(--primary-dark); color: #fff; font-weight: 600; text-decoration: none; }
+  .ct-checkout:hover { background: var(--black); }
+  .ct-continue { display: block; text-align: center; margin-top: 12px; font-size: 14px; color: var(--muted); }
+
+  .ct-empty { text-align: center; padding: 60px 20px; background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+  .ct-empty i { font-size: 48px; color: var(--border); margin-bottom: 12px; }
+
+  @media (max-width: 900px) {
+    .ct-layout { grid-template-columns: minmax(0, 1fr); }
+    .ct-summary { position: static; }
+  }
+  @media (max-width: 520px) {
+    .ct-item { grid-template-columns: 64px minmax(0, 1fr); padding: 14px; }
+    .ct-img { width: 64px; height: 64px; }
+    .ct-line { grid-column: 2; text-align: left; }
+  }
+</style>
+
+<div class="ct-wrap">
   <h1>Your Cart</h1>
 
-  <% if (cart.items.length === 0) { %>
-    <p class="empty-cart">Your cart is empty.</p>
-    <a href="/products" class="btn">Continue Shopping</a>
-  <% } else { %>
-
-    <div class="cart-grid">
-      <% cart.items.forEach(item => { %>
-        <div class="cart-item" data-id="<%= item.product_id %>">
-          <img src="<%= item.image_url %>" alt="<%= item.name %>">
-
-          <div class="cart-item-info">
-            <h4><%= item.name %></h4>
-            <p>₦<span class="item-price"><%= (item.price * item.quantity).toLocaleString() %></span></p>
-
-            <input type="number" class="quantity-input" value="<%= item.quantity %>" min="1">
-
-           <button class="remove-item-btn" data-id="<%= item.product_id %>">
-                <i class="fa fa-trash"></i>
-            </button>
-
-          </div>
-        </div>
-      <% }) %>
+  <% if (!summary.items.length) { %>
+    <div class="ct-empty">
+      <i class="fa-solid fa-cart-shopping"></i>
+      <p>Your cart is empty.</p>
+      <a href="/products" class="btn btn-primary">Continue Shopping</a>
     </div>
+  <% } else { %>
+    <div class="ct-layout">
 
-    <hr>
+      <div class="ct-items" id="cartItems">
+        <% summary.items.forEach(item => { %>
+          <div class="ct-item" data-id="<%= item.product_id %>">
+            <img class="ct-img" src="<%= item.image_url %>" alt="<%= item.name %>">
+            <div>
+              <a class="ct-name" href="/products/<%= item.product_id %>"><%= item.name %></a>
+              <div class="ct-unit">
+                <%= fmt(item.price) %> each
+                <% if (item.on_sale) { %><span class="price-off" style="margin-left:6px"><%= item.promo_label || "SALE" %></span><% } %>
+              </div>
+              <div class="ct-controls">
+                <div class="ct-qty">
+                  <button type="button" data-step="-1" aria-label="Decrease">−</button>
+                  <input type="number" class="quantity-input" value="<%= item.quantity %>" min="1" aria-label="Quantity">
+                  <button type="button" data-step="1" aria-label="Increase">+</button>
+                </div>
+                <button type="button" class="ct-remove remove-item-btn" data-id="<%= item.product_id %>" data-name="<%= item.name %>">
+                  <i class="fa fa-trash"></i> Remove
+                </button>
+              </div>
+            </div>
+            <div class="ct-line">
+              <span class="item-total"><%= fmt(item.price * item.quantity) %></span>
+              <s class="item-original" <%= item.on_sale ? "" : "hidden" %>><%= fmt(item.original_price * item.quantity) %></s>
+            </div>
+          </div>
+        <% }) %>
+      </div>
 
-    <div class="cart-summary">
-      <h3>Total: ₦<span id="cart-total"><%= cart.totalPrice.toLocaleString() %></span></h3>
-      <a href="/checkout" class="btn btn-checkout">Proceed to Checkout</a>
+      <aside class="ct-summary">
+        <h2>Order Summary</h2>
+
+        <div class="ct-row"><span>Subtotal (<span id="sumQty"><%= summary.totalQty %></span> items)</span><span id="sumSubtotal"><%= fmt(summary.subtotal) %></span></div>
+        <div class="ct-row green" id="rowSavings" <%= summary.saleSavings > 0 ? "" : "hidden" %>>
+          <span>Sale savings</span><span id="sumSavings">-<%= fmt(summary.saleSavings) %></span>
+        </div>
+        <div class="ct-row green" id="rowDiscount" <%= summary.discount > 0 ? "" : "hidden" %>>
+          <span>Coupon (<span id="sumCouponCode"><%= summary.coupon ? summary.coupon.code : "" %></span>)</span>
+          <span id="sumDiscount">-<%= fmt(summary.discount) %></span>
+        </div>
+
+        <div class="ct-coupon">
+          <div class="ct-coupon-applied" id="couponApplied" <%= summary.coupon ? "" : "hidden" %>>
+            <span><i class="fa-solid fa-tag"></i> <strong id="appliedCode"><%= summary.coupon ? summary.coupon.code : "" %></strong> applied</span>
+            <button type="button" id="removeCoupon">Remove</button>
+          </div>
+          <div class="ct-msg" id="couponPartial" <%= summary.coupon && summary.coupon.partial ? "" : "hidden" %>>Coupon applied to items not already on sale.</div>
+          <form id="couponForm" <%= summary.coupon ? "hidden" : "" %>>
+            <input type="text" name="code" id="couponCode" placeholder="Coupon code" autocomplete="off">
+            <button type="submit">Apply</button>
+          </form>
+          <div class="ct-msg <%= summary.couponError ? 'err' : '' %>" id="couponMsg"><%= summary.couponError || "" %></div>
+        </div>
+
+        <div class="ct-row total"><span>Total</span><span id="sumTotal"><%= fmt(summary.total) %></span></div>
+
+        <a href="/cart/checkout" class="ct-checkout">Proceed to Checkout</a>
+        <a href="/products" class="ct-continue">← Continue shopping</a>
+      </aside>
     </div>
   <% } %>
 </div>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const cartTotalEl = document.getElementById("cart-total");
-
-  // Update quantity instantly
-  document.querySelectorAll('.quantity-input').forEach(input => {
-    input.addEventListener('input', async (e) => {
-      const cartItem = e.target.closest('.cart-item');
-      const productId = cartItem.dataset.id;
-      let quantity = parseInt(e.target.value);
-      if (quantity < 1) quantity = 1;
-      e.target.value = quantity;
-
-      const res = await fetch('/cart/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: productId, quantity })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Update item price
-        const itemData = data.cart.items.find(i => i.product_id == productId);
-        cartItem.querySelector('.item-price').textContent = (itemData.price * itemData.quantity).toLocaleString();
-        // Update total price
-        cartTotalEl.textContent = data.cart.totalPrice.toLocaleString();
-      }
-    });
-  });
-
-  // Remove item instantly
-  document.querySelectorAll('.remove-item-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const cartItem = btn.closest('.cart-item');
-      const productId = btn.dataset.id;
-
-      const res = await fetch('/cart/remove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: productId })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Remove item from DOM
-        cartItem.remove();
-        // Update total
-        cartTotalEl.textContent = data.cart.totalPrice.toLocaleString();
-        // Reload if cart empty
-        if (data.cart.items.length === 0) location.reload();
-      }
-    });
-  });
-});
-</script> -->
-
-
-<!-- <div class="cart-container">
-  <h1>Your Cart</h1>
-
-  <% if (cart.items.length === 0) { %>
-    <p class="empty-cart">Your cart is empty.</p>
-    <a href="/products" class="btn">Continue Shopping</a>
-  <% } else { %>
-
-    <div class="cart-grid">
-      <% cart.items.forEach(item => { %>
-        <div class="cart-item" data-id="<%= item.product_id %>">
-          <img src="<%= item.image_url %>" alt="<%= item.name %>">
-
-          <div class="cart-item-info">
-            <h4><%= item.name %></h4>
-            <p>₦<span class="item-price"><%= (item.price * item.quantity).toLocaleString() %></span></p>
-
-            <input type="number" class="quantity-input" value="<%= item.quantity %>" min="1">
-
-            <button class="remove-item-btn" data-id="<%= item.product_id %>" data-name="<%= item.name %>">
-              <i class="fa fa-trash"></i>
-            </button>
-          </div>
-        </div>
-      <% }) %>
-    </div>
-
-    <hr>
-
-    <div class="cart-summary">
-      <h3>Total: ₦<span id="cart-total"><%= cart.totalPrice.toLocaleString() %></span></h3>
-       <a href="/cart/checkout" class="btn btn-checkout">Proceed to Checkout</a>
-
-    </div>
-  <% } %>
-</div>
-
-
-<div id="deleteModal" class="modal" style="display: none;">
-  <div class="modal-content delete-modal">
-    <span class="close" onclick="closeDeleteModal()">&times;</span>
-
-    <h3>Delete Product</h3>
-    <p>
-      Are you sure you want to delete  
-      <strong id="deleteProductName"></strong>?
-    </p>
-
-    <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
-    <button type="button" class="btn-danger" id="confirmDeleteBtn">Yes, Delete</button>
-  </div>
-</div> -->
-
-
-<div class="container cart-container">
-  <h1>Your Cart</h1>
-
-  <% if (cart.items.length === 0) { %>
-    <p class="empty-cart">Your cart is empty.</p>
-    <a href="/products" class="btn btn-primary">Continue Shopping</a>
-  <% } else { %>
-
-    <div class="cart-grid">
-      <% cart.items.forEach(item => { %>
-        <div class="cart-item card" data-id="<%= item.product_id %>">
-
-          <img src="<%= item.image_url %>" alt="<%= item.name %>">
-
-          <div class="cart-item-info">
-            <h4><%= item.name %></h4>
-
-            <p>
-              ₦<span class="item-price">
-                <%= (item.price * item.quantity).toLocaleString() %>
-              </span>
-            </p>
-
-            <!-- Quantity -->
-            <input
-              type="number"
-              class="quantity-input"
-              value="<%= item.quantity %>"
-              min="1"
-            >
-
-            <!-- Remove -->
-            <button
-              type="button"
-              class="btn btn-danger remove-item-btn"
-              data-id="<%= item.product_id %>"
-              data-name="<%= item.name %>"
-            >
-              <i class="fa fa-trash"></i>
-              Remove
-            </button>
-          </div>
-
-        </div>
-      <% }) %>
-    </div>
-
-    <hr>
-
-    <div class="cart-summary card">
-      <h3>
-        Total:
-        ₦<span id="cart-total">
-          <%= cart.totalPrice.toLocaleString() %>
-        </span>
-      </h3>
-
-      <a href="/cart/checkout" class="btn btn-primary">
-        Proceed to Checkout
-      </a>
-    </div>
-
-  <% } %>
-</div>
-
 
 <div id="deleteModal" class="modal">
   <div class="modal-box center small">
-
-    <h3>Delete Product</h3>
-
-    <p>
-      Are you sure you want to delete
-      <strong id="deleteProductName"></strong>?
-    </p>
-
-    <div style="display:flex; gap:10px; margin-top:20px;">
-      <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
-        Cancel
-      </button>
-
-      <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-        Yes, Delete
-      </button>
+    <h3>Remove item</h3>
+    <p>Remove <strong id="deleteProductName"></strong> from your cart?</p>
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:center;">
+      <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Remove</button>
     </div>
-
   </div>
 </div>
 
-
-
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const cartTotalEl = document.getElementById("cart-total");
-  const deleteModal = document.getElementById("deleteModal");
-  const deleteProductName = document.getElementById("deleteProductName");
-  const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-  let deleteProductId = null;
-  let deleteCartItemEl = null;
+(() => {
+  const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+  const $ = id => document.getElementById(id);
+  if (!$("cartItems")) return;
 
-  // Update quantity instantly
-  document.querySelectorAll('.quantity-input').forEach(input => {
-    input.addEventListener('input', async (e) => {
-      const cartItem = e.target.closest('.cart-item');
-      const productId = cartItem.dataset.id;
-      let quantity = parseInt(e.target.value);
-      if (quantity < 1) quantity = 1;
-      e.target.value = quantity;
-
-      const res = await fetch('/cart/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: productId, quantity })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const itemData = data.cart.items.find(i => i.product_id == productId);
-        cartItem.querySelector('.item-price').textContent = (itemData.price * itemData.quantity).toLocaleString();
-        cartTotalEl.textContent = data.cart.totalPrice.toLocaleString();
-      }
+  const post = async (url, body) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
     });
-  });
-
-  // Open delete modal
-  document.querySelectorAll('.remove-item-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      deleteProductId = btn.dataset.id;
-      deleteCartItemEl = btn.closest('.cart-item');
-      deleteProductName.textContent = btn.dataset.name;
-      deleteModal.style.display = 'block';
-    });
-  });
-
-  // Confirm delete
-  confirmDeleteBtn.addEventListener('click', async () => {
-    if (!deleteProductId) return;
-
-    const res = await fetch('/cart/remove', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: deleteProductId })
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      deleteCartItemEl.remove();
-      cartTotalEl.textContent = data.cart.totalPrice.toLocaleString();
-      deleteModal.style.display = 'none';
-
-      // Reload if cart empty
-      if (data.cart.items.length === 0) location.reload();
-    }
-  });
-
-  // Close modal function
-  window.closeDeleteModal = () => {
-    deleteModal.style.display = 'none';
-    deleteProductId = null;
-    deleteCartItemEl = null;
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, data };
   };
 
-  // Close modal when clicking outside
-  window.addEventListener('click', e => {
-    if (e.target === deleteModal) closeDeleteModal();
+  function render(s) {
+    if (!s.items.length) return location.reload();
+    $("sumQty").textContent = s.totalQty;
+    $("sumSubtotal").textContent = fmt(s.subtotal);
+    $("rowSavings").hidden = !(s.saleSavings > 0);
+    $("sumSavings").textContent = "-" + fmt(s.saleSavings);
+    $("rowDiscount").hidden = !(s.discount > 0);
+    $("sumDiscount").textContent = "-" + fmt(s.discount);
+    $("sumCouponCode").textContent = s.coupon ? s.coupon.code : "";
+    $("sumTotal").textContent = fmt(s.total);
+
+    $("couponApplied").hidden = !s.coupon;
+    $("couponForm").hidden = !!s.coupon;
+    $("appliedCode").textContent = s.coupon ? s.coupon.code : "";
+    $("couponPartial").hidden = !(s.coupon && s.coupon.partial);
+    const msg = $("couponMsg");
+    if (s.couponError) { msg.textContent = s.couponError; msg.className = "ct-msg err"; }
+    else if (msg.classList.contains("err")) { msg.textContent = ""; msg.className = "ct-msg"; }
+
+    s.items.forEach(i => {
+      const row = document.querySelector(`.ct-item[data-id="${i.product_id}"]`);
+      if (!row) return;
+      row.querySelector(".quantity-input").value = i.quantity;
+      row.querySelector(".item-total").textContent = fmt(i.price * i.quantity);
+      const orig = row.querySelector(".item-original");
+      orig.hidden = !i.on_sale;
+      orig.textContent = fmt(i.original_price * i.quantity);
+    });
+  }
+
+  // Quantity
+  let qtyTimer;
+  async function setQty(row, qty) {
+    qty = Math.max(parseInt(qty) || 1, 1);
+    row.querySelector(".quantity-input").value = qty;
+    clearTimeout(qtyTimer);
+    qtyTimer = setTimeout(async () => {
+      const { ok, data } = await post("/cart/update", { product_id: row.dataset.id, quantity: qty });
+      if (ok) {
+        render(data.summary);
+        if (data.capped) { $("couponMsg").textContent = "Quantity limited to available stock"; $("couponMsg").className = "ct-msg err"; }
+      }
+    }, 300);
+  }
+  document.querySelectorAll(".ct-item").forEach(row => {
+    const input = row.querySelector(".quantity-input");
+    row.querySelectorAll(".ct-qty button").forEach(b =>
+      b.addEventListener("click", () => setQty(row, (parseInt(input.value) || 1) + parseInt(b.dataset.step)))
+    );
+    input.addEventListener("change", () => setQty(row, input.value));
   });
-});
+
+  // Remove
+  const modal = $("deleteModal");
+  let pending = null;
+  document.querySelectorAll(".remove-item-btn").forEach(btn => btn.addEventListener("click", () => {
+    pending = btn.closest(".ct-item");
+    $("deleteProductName").textContent = btn.dataset.name;
+    modal.classList.add("active");
+  }));
+  window.closeDeleteModal = () => { modal.classList.remove("active"); pending = null; };
+  $("confirmDeleteBtn").addEventListener("click", async () => {
+    if (!pending) return;
+    const { ok, data } = await post("/cart/remove", { product_id: pending.dataset.id });
+    if (ok) { pending.remove(); closeDeleteModal(); render(data.summary); }
+  });
+  modal.addEventListener("click", e => { if (e.target === modal) closeDeleteModal(); });
+
+  // Coupon
+  $("couponForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const code = $("couponCode").value.trim();
+    const msg = $("couponMsg");
+    if (!code) return;
+    const { ok, data } = await post("/cart/coupon", { code });
+    if (ok) {
+      render(data.summary);
+      msg.textContent = data.message; msg.className = "ct-msg ok";
+      $("couponCode").value = "";
+    } else {
+      msg.textContent = data.error || "Could not apply coupon"; msg.className = "ct-msg err";
+    }
+  });
+  $("removeCoupon").addEventListener("click", async () => {
+    const { ok, data } = await post("/cart/coupon/remove");
+    if (ok) { render(data.summary); $("couponMsg").textContent = ""; $("couponMsg").className = "ct-msg"; }
+  });
+})();
 </script>

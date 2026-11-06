@@ -1,5 +1,5 @@
 <%
-  const price = Number(product.price) || 0;
+  const pricing = product.pricing || { price: Number(product.price) || 0, onSale: false };
   const stock = Number(product.stock) || 0;
   const inStock = stock > 0;
   const lowStock = inStock && stock <= 5;
@@ -57,6 +57,7 @@
   }
   .pd-title { font-size: clamp(22px, 3vw, 30px); line-height: 1.25; margin: 0; color: var(--black); overflow-wrap: anywhere; }
   .pd-price { font-size: 28px; font-weight: 700; color: var(--black); }
+  .pd-save { font-size: 14px; font-weight: 600; color: #15803d; margin-top: -8px; }
 
   .pd-stock { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
   .pd-stock::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
@@ -194,7 +195,23 @@
 
       <h1 class="pd-title"><%= product.name %></h1>
 
-      <div class="pd-price"><%= fmt(price) %></div>
+      <div class="pd-price">
+        <%- include('../partials/price', { pricing, size: 'lg' }) %>
+      </div>
+      <% if (pricing.onSale) { %>
+        <div class="pd-save">You save <%= fmt(pricing.original - pricing.price) %></div>
+        <% if (pricing.source === "campaign") { %>
+          <a class="promo-label" href="/promotions?campaign=<%= pricing.campaignId %>" style="text-decoration:none">
+            🔥 <%= pricing.label %>
+          </a>
+        <% } %>
+        <% if (pricing.endsAt) { %>
+          <div class="sale-countdown" data-ends="<%= pricing.endsAt %>">
+            <i class="fa-regular fa-clock"></i>
+            <%= pricing.source === "campaign" ? "Promo" : "Sale" %> ends in <span class="sale-countdown-time">…</span>
+          </div>
+        <% } %>
+      <% } %>
 
       <% if (!inStock) { %>
         <span class="pd-stock out">Out of stock</span>
@@ -258,7 +275,7 @@
             </div>
             <div class="pd-card-body">
               <p class="pd-card-name"><%= r.name %></p>
-              <div class="pd-card-price"><%= fmt(r.price) %></div>
+              <div class="pd-card-price"><%- include('../partials/price', { pricing: r.pricing }) %></div>
             </div>
           </a>
         <% }) %>
@@ -281,6 +298,22 @@
   const frame = document.getElementById("imageFrame");
   const maxQty = parseInt(qty.max) || Infinity;
   let toastTimer;
+
+  // Sale countdown
+  document.querySelectorAll(".sale-countdown").forEach(el => {
+    const ends = new Date(el.dataset.ends).getTime();
+    const out = el.querySelector(".sale-countdown-time");
+    const tick = () => {
+      let s = Math.max(0, Math.floor((ends - Date.now()) / 1000));
+      if (s === 0) { el.innerHTML = "Sale has ended — refresh for the current price"; return clearInterval(t); }
+      const d = Math.floor(s / 86400); s %= 86400;
+      const h = Math.floor(s / 3600); s %= 3600;
+      const m = Math.floor(s / 60); s %= 60;
+      out.textContent = (d ? d + "d " : "") + `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+    };
+    const t = setInterval(tick, 1000);
+    tick();
+  });
 
   // Quantity stepper
   form.querySelectorAll(".pd-qty button").forEach(btn => {

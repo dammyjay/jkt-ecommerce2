@@ -1,5 +1,16 @@
 const pool = require("../utils/db");
 const cloudinary = require("../utils/cloudinary");
+const { withPricing } = require("../utils/pricing");
+
+// Normalise optional sale fields from the admin form
+function saleFields(body) {
+  const salePrice = parseFloat(body.sale_price);
+  return [
+    salePrice > 0 ? salePrice : null,
+    body.sale_starts_at || null,
+    body.sale_ends_at || null,
+  ];
+}
 
 // 🛍️ Show all products (for users)
 exports.getAllProducts = async (req, res) => {
@@ -20,7 +31,7 @@ exports.getAllProducts = async (req, res) => {
       description: "View products at affordable prices on JKT E-Commerce",
       keywords: "online shopping, jkt, ecommerce",
       image: "/images/JKT logo bg.png",
-      products: products.rows,
+      products: await withPricing(products.rows),
       categories: categories.rows,
       user: req.session.user
     });
@@ -50,7 +61,7 @@ exports.getAllProductsAdmin = async (req, res) => {
       description: "Manage products on JKT E-Commerce",
       keywords: "online shopping, jkt, ecommerce",
       image: "/images/JKT logo bg.png",
-      products: products.rows,
+      products: await withPricing(products.rows),
       categories: categories.rows,
       user: req.session.user
     });
@@ -73,8 +84,10 @@ exports.createProduct = async (req, res) => {
           ImageUrl = upload.secure_url || null;
         }
     await pool.query(
-      "INSERT INTO products (name, description, price, image_url, stock, category_id) VALUES ($1, $2, $3, $4, $5, $6)",
-      [name, description, price, ImageUrl, stock, category_id]
+      `INSERT INTO products
+        (name, description, price, image_url, stock, category_id, sale_price, sale_starts_at, sale_ends_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [name, description, price, ImageUrl, stock, category_id, ...saleFields(req.body)]
     );
     res.redirect("/products/admin/manage");
   } catch (err) {
@@ -105,8 +118,10 @@ exports.updateProduct = async (req, res) => {
 
 
     await pool.query(
-      "UPDATE products SET name=$1, description=$2, price=$3, image_url=$4, stock=$5, category_id=$6 WHERE id=$7",
-      [name, description, price, ImageUrl, stock, category_id, id]
+      `UPDATE products SET name=$1, description=$2, price=$3, image_url=$4, stock=$5, category_id=$6,
+         sale_price=$7, sale_starts_at=$8, sale_ends_at=$9
+       WHERE id=$10`,
+      [name, description, price, ImageUrl, stock, category_id, ...saleFields(req.body), id]
     );
     res.redirect("/products/admin/manage");
   } catch (err) {
@@ -148,10 +163,11 @@ exports.getProductById = async (req, res) => {
     }
 
     const product = result.rows[0];
+    await withPricing([product]); // sets product.pricing
 
     const related = await pool.query(
       `
-      SELECT id, name, price, image_url
+      SELECT id, name, price, image_url, category_id, sale_price, sale_starts_at, sale_ends_at
       FROM products
       WHERE id <> $1 AND category_id IS NOT DISTINCT FROM $2
       ORDER BY created_at DESC
@@ -162,7 +178,7 @@ exports.getProductById = async (req, res) => {
 
     res.render("public/detail", {
       product,
-      relatedProducts: related.rows,
+      relatedProducts: await withPricing(related.rows),
       user: req.session.user,
 
       // ✅ Dynamic SEO

@@ -1,0 +1,215 @@
+<%
+  const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+  const now = new Date();
+  const statusOf = c => {
+    if (!c.is_active) return ["Disabled", "#6b7280", "#f3f4f6"];
+    if (c.starts_at && new Date(c.starts_at) > now) return ["Scheduled", "#1d4ed8", "#eff6ff"];
+    if (c.ends_at && new Date(c.ends_at) <= now) return ["Expired", "#b91c1c", "#fef2f2"];
+    if (c.usage_limit != null && c.used_count >= c.usage_limit) return ["Used up", "#b45309", "#fffbeb"];
+    return ["Active", "#15803d", "#f0fdf4"];
+  };
+%>
+
+<style>
+  .cp-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; }
+  .cp-form .full { grid-column: 1 / -1; }
+  .cp-form label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+  .cp-form input, .cp-form select { width: 100%; }
+  .cp-form small { color: var(--muted); font-size: 12px; }
+  .cp-box { max-width: 620px !important; }
+  .cp-code { font-family: ui-monospace, Consolas, monospace; font-weight: 700; letter-spacing: .05em; background: #f5f5f5; padding: 3px 8px; border-radius: 4px; }
+  .cp-status { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .cp-actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .cp-actions form { display: inline; margin: 0; }
+  .cp-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+  .cp-empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+  .cp-switch { display: flex; align-items: center; gap: 8px; }
+  .cp-switch input { width: auto; margin: 0; }
+  @media (max-width: 520px) { .cp-form { grid-template-columns: minmax(0, 1fr); } }
+</style>
+
+<div class="container">
+  <div class="card">
+    <div class="page-header" style="display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+      <h1>🏷️ Coupons</h1>
+      <button class="btn btn-primary" onclick="openCouponModal()">➕ New Coupon</button>
+    </div>
+
+    <% if (error) { %><div class="cp-alert"><%= error %></div><% } %>
+
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Discount</th>
+            <th>Conditions</th>
+            <th>Usage</th>
+            <th>Valid</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!coupons.length) { %>
+            <tr><td colspan="7" class="cp-empty">No coupons yet. Create one like <span class="cp-code">WELCOME10</span> for first-time buyers.</td></tr>
+          <% } %>
+          <% coupons.forEach(c => { const [label, color, bg] = statusOf(c); %>
+            <tr>
+              <td>
+                <span class="cp-code"><%= c.code %></span>
+                <% if (c.description) { %><div style="font-size:12px; color:#6b7280; margin-top:4px;"><%= c.description %></div><% } %>
+              </td>
+              <td>
+                <strong><%= c.discount_type === "percent" ? Number(c.value) + "%" : fmt(c.value) %></strong> off
+                <% if (c.max_discount) { %><div style="font-size:12px; color:#6b7280;">max <%= fmt(c.max_discount) %></div><% } %>
+              </td>
+              <td style="font-size:13px;">
+                <%= Number(c.min_order) > 0 ? "Min " + fmt(c.min_order) : "No minimum" %>
+                <% if (c.per_user_limit) { %><div style="color:#6b7280;"><%= c.per_user_limit %>× per customer</div><% } %>
+                <% if (c.allow_with_sale === false) { %><div style="color:#6b7280;">Not on sale items</div><% } %>
+              </td>
+              <td>
+                <%= c.used_count %><%= c.usage_limit != null ? " / " + c.usage_limit : "" %>
+                <% if (Number(c.total_discount_given) > 0) { %><div style="font-size:12px; color:#6b7280;"><%= fmt(c.total_discount_given) %> given</div><% } %>
+              </td>
+              <td style="font-size:12px;" data-dates>
+                <div><span class="local-date" data-date="<%= c.starts_at ? new Date(c.starts_at).toISOString() : '' %>">Now</span></div>
+                <div>→ <span class="local-date" data-date="<%= c.ends_at ? new Date(c.ends_at).toISOString() : '' %>">No end</span></div>
+              </td>
+              <td><span class="cp-status" style="color:<%= color %>; background:<%= bg %>;"><%= label %></span></td>
+              <td>
+                <div class="cp-actions">
+                  <button class="icon-btn" title="Edit" onclick='openCouponModal(<%- JSON.stringify(c).replace(/</g, "\\u003c").replace(/'/g, "\\u0027") %>)'>✏️</button>
+                  <form method="POST" action="/admin/coupons/<%= c.id %>/toggle">
+                    <button class="icon-btn" title="<%= c.is_active ? 'Disable' : 'Enable' %>"><%= c.is_active ? "⏸️" : "▶️" %></button>
+                  </form>
+                  <form method="POST" action="/admin/coupons/<%= c.id %>/delete" onsubmit="return confirm('Delete coupon <%= c.code %>?')">
+                    <button class="icon-btn" title="Delete">🗑️</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="couponModal" class="modal">
+  <div class="modal-box cp-box">
+    <span class="close" onclick="closeCouponModal()">&times;</span>
+    <h2 id="couponModalTitle">New Coupon</h2>
+
+    <form id="couponForm" class="cp-form" method="POST" action="/admin/coupons/create">
+      <div class="full">
+        <label>Code</label>
+        <input type="text" name="code" id="cCode" required pattern="[A-Za-z0-9_\-]{3,40}" placeholder="e.g. ARDUINO15" style="text-transform:uppercase">
+      </div>
+      <div class="full">
+        <label>Description <small>(shown to you only)</small></label>
+        <input type="text" name="description" id="cDescription" placeholder="e.g. Back-to-school promo">
+      </div>
+      <div>
+        <label>Type</label>
+        <select name="discount_type" id="cType">
+          <option value="percent">Percentage (%)</option>
+          <option value="fixed">Fixed amount (₦)</option>
+        </select>
+      </div>
+      <div>
+        <label>Value</label>
+        <input type="number" step="0.01" min="0.01" name="value" id="cValue" required>
+      </div>
+      <div>
+        <label>Minimum order (₦)</label>
+        <input type="number" step="0.01" min="0" name="min_order" id="cMinOrder" placeholder="0">
+      </div>
+      <div>
+        <label>Max discount (₦) <small>for % coupons</small></label>
+        <input type="number" step="0.01" min="0" name="max_discount" id="cMaxDiscount" placeholder="No cap">
+      </div>
+      <div>
+        <label>Total uses allowed</label>
+        <input type="number" min="1" name="usage_limit" id="cUsageLimit" placeholder="Unlimited">
+      </div>
+      <div>
+        <label>Uses per customer</label>
+        <input type="number" min="1" name="per_user_limit" id="cPerUser" placeholder="Unlimited">
+      </div>
+      <div>
+        <label>Starts</label>
+        <input type="datetime-local" data-iso="starts_at" id="cStarts">
+        <input type="hidden" name="starts_at">
+      </div>
+      <div>
+        <label>Ends</label>
+        <input type="datetime-local" data-iso="ends_at" id="cEnds">
+        <input type="hidden" name="ends_at">
+      </div>
+      <div class="full cp-switch">
+        <input type="checkbox" name="allow_with_sale" id="cAllowSale" checked>
+        <label for="cAllowSale" style="margin:0">Can be used on items already on sale / in a promotion</label>
+      </div>
+      <div class="full cp-switch">
+        <input type="checkbox" name="is_active" id="cActive" checked>
+        <label for="cActive" style="margin:0">Active</label>
+      </div>
+      <div class="full">
+        <button type="submit" class="btn btn-primary btn-full" id="couponSubmit">Create Coupon</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  const modal = document.getElementById("couponModal");
+  const form = document.getElementById("couponForm");
+  const $ = id => document.getElementById(id);
+
+  const toLocalInput = v => {
+    if (!v) return "";
+    const d = new Date(v);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
+
+  // Show dates in the admin's local time
+  document.querySelectorAll(".local-date").forEach(el => {
+    if (el.dataset.date) {
+      el.textContent = new Date(el.dataset.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    }
+  });
+
+  window.openCouponModal = (c) => {
+    const editing = !!c;
+    c = c || {};
+    form.action = editing ? `/admin/coupons/${c.id}/update` : "/admin/coupons/create";
+    $("couponModalTitle").textContent = editing ? `Edit ${c.code}` : "New Coupon";
+    $("couponSubmit").textContent = editing ? "Save Changes" : "Create Coupon";
+    $("cCode").value = c.code || "";
+    $("cDescription").value = c.description || "";
+    $("cType").value = c.discount_type || "percent";
+    $("cValue").value = c.value ? Number(c.value) : "";
+    $("cMinOrder").value = Number(c.min_order) > 0 ? Number(c.min_order) : "";
+    $("cMaxDiscount").value = c.max_discount ? Number(c.max_discount) : "";
+    $("cUsageLimit").value = c.usage_limit ?? "";
+    $("cPerUser").value = c.per_user_limit ?? "";
+    $("cStarts").value = toLocalInput(c.starts_at);
+    $("cEnds").value = toLocalInput(c.ends_at);
+    $("cActive").checked = editing ? !!c.is_active : true;
+    $("cAllowSale").checked = editing ? c.allow_with_sale !== false : true;
+    modal.classList.add("active");
+  };
+  window.closeCouponModal = () => modal.classList.remove("active");
+  modal.addEventListener("click", e => { if (e.target === modal) closeCouponModal(); });
+
+  form.addEventListener("submit", () => {
+    form.querySelectorAll("[data-iso]").forEach(input => {
+      form.querySelector(`input[type=hidden][name="${input.dataset.iso}"]`).value =
+        input.value ? new Date(input.value).toISOString() : "";
+    });
+  });
+})();
+</script>

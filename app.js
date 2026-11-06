@@ -9,6 +9,8 @@ const methodOverride = require("method-override");
 const layout = require("express-ejs-layouts");
 const pool = require("./utils/db");
 const createTables = require("./utils/initTables");
+const { withPricing, getActiveCampaigns } = require("./utils/pricing");
+const campaignController = require("./controllers/campaignController");
 const passport = require("./utils/passportSetup");
 const favicon = require("serve-favicon");
 
@@ -124,6 +126,9 @@ app.use("/admin", adminProjectRoutes);
 //     ogImage: "/images/JKT logo bg.png",});
 // });
 
+// Hot Deals: running campaigns + every discounted product
+app.get("/promotions", campaignController.hotDeals);
+
 app.get("/", async (req, res) => {
   try {
     // Fetch categories
@@ -132,18 +137,21 @@ app.get("/", async (req, res) => {
 
     // Fetch featured products
     const featuredResult = await pool.query("SELECT * FROM products ORDER BY created_at DESC LIMIT 6");
-    const featuredProducts = featuredResult.rows;
+    const featuredProducts = await withPricing(featuredResult.rows);
 
     // Fetch new arrivals
     const newResult = await pool.query("SELECT * FROM products ORDER BY created_at DESC LIMIT 6");
-    const newProducts = newResult.rows;
+    const newProducts = await withPricing(newResult.rows);
 
-    // Optional: fetch promotions & testimonials
-     const promotions = [
-      { title: "Flash Sale", discount: "20%", image_url: "/images/promo1.jpg" },
-      { title: "Black Friday", discount: "50%", image_url: "/images/promo2.jpg" },
-      { title: "Mega Deal", discount: "30%", image_url: "/images/promo3.jpg" },
-    ];
+    // Running promo campaigns (managed in Admin → Store → Promotions)
+    const promotions = (await getActiveCampaigns()).map(c => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      discount: campaignController.discountLabel(c),
+      image_url: c.banner_url,
+      ends_at: c.ends_at,
+    }));
 
     // Dummy testimonials (replace with actual testimonials table if exists)
     // const testimonials = [
@@ -238,7 +246,7 @@ app.get("/api/search", async (req, res) => {
         id,
         name AS title,
         'product' AS type,
-        price,
+        price, category_id, sale_price, sale_starts_at, sale_ends_at,
         image_url AS image
       FROM products
       WHERE name ILIKE $1
@@ -260,7 +268,16 @@ app.get("/api/search", async (req, res) => {
       [`%${q}%`]
     );
 
-    res.json([...products.rows, ...projects.rows]);
+    // Return the live price (sale / campaign) without leaking pricing internals
+    const priced = (await withPricing(products.rows)).map(p => ({
+      id: p.id,
+      title: p.title,
+      type: p.type,
+      image: p.image,
+      price: p.pricing.price,
+    }));
+
+    res.json([...priced, ...projects.rows]);
   } catch (err) {
     console.error("Search error:", err);
     res.status(500).json([]);

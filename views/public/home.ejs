@@ -30,9 +30,10 @@
     <div class="scroll-slider">
       <% featuredProducts.forEach(product => { %>
         <div class="card product-card">
+          <% if (product.pricing && product.pricing.onSale) { %><span class="sale-ribbon">SALE -<%= product.pricing.percentOff %>%</span><% } %>
           <img src="<%= product.image_url %>" alt="<%= product.name %>">
           <h3><%= product.name %></h3>
-          <p class="price">₦<%= product.price %></p>
+          <p class="price"><%- include('../partials/price', { pricing: product.pricing }) %></p>
           <a href="/products/<%= product.id %>" class="btn btn-secondary btn-full">View Product</a>
         </div>
       <% }) %>
@@ -45,23 +46,32 @@
 </section>
 
 <!-- ======================= PROMOTIONS ======================= -->
+<% if (promotions.length) { %>
 <section class="promotions">
   <div class="container home-banner-card">
     <h2>Hot Deals & Promotions</h2>
     <div class="scroll-slider promo-slider">
       <% promotions.forEach(promo => { %>
-        <div class="card promo-card">
-          <img src="<%= promo.image_url %>" alt="<%= promo.title %>">
+        <a class="card promo-card" href="/promotions?campaign=<%= promo.id %>" style="text-decoration:none; color:inherit;">
+          <% if (promo.image_url) { %>
+            <img src="<%= promo.image_url %>" alt="<%= promo.title %>">
+          <% } else { %>
+            <div class="promo-fallback"><%= promo.discount %></div>
+          <% } %>
           <h3><%= promo.title %></h3>
-          <p class="discount"><%= promo.discount %> OFF</p>
-        </div>
+          <p class="discount"><%= promo.discount %></p>
+          <% if (promo.ends_at) { %>
+            <p class="promo-ends" data-ends="<%= new Date(promo.ends_at).toISOString() %>">Ends soon</p>
+          <% } %>
+        </a>
       <% }) %>
     </div>
     <div class="btn btn-sm">
-      <a href="/promotions" class="btn btn-primary">View More</a>
+      <a href="/promotions" class="btn btn-primary">View All Deals</a>
     </div>
   </div>
 </section>
+<% } %>
 
 
 <section class="testimonials">
@@ -107,9 +117,10 @@
     <div class="scroll-slider">
       <% newProducts.forEach(product => { %>
         <div class="card product-card">
+          <% if (product.pricing && product.pricing.onSale) { %><span class="sale-ribbon">SALE -<%= product.pricing.percentOff %>%</span><% } %>
           <img src="<%= product.image_url %>" alt="<%= product.name %>">
           <h3><%= product.name %></h3>
-          <p class="price">₦<%= product.price %></p>
+          <p class="price"><%- include('../partials/price', { pricing: product.pricing }) %></p>
           <a href="/products/<%= product.id %>" class="btn btn-secondary btn-full">View Product</a>
         </div>
       <% }) %>
@@ -120,3 +131,13 @@
   </div>
 </section>
 
+
+<script>
+// Promo "ends in" labels
+document.querySelectorAll(".promo-ends[data-ends]").forEach(el => {
+  const ms = new Date(el.dataset.ends) - Date.now();
+  if (ms <= 0) return el.remove();
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24;
+  el.textContent = "Ends in " + (d ? `${d}d ${h}h` : h ? `${h}h` : "less than an hour");
+});
+</script>

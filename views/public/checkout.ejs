@@ -1,117 +1,116 @@
-<!-- <div class="checkout-container">
+<% const fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 }); %>
+
+<style>
+  .co-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  .co-wrap h1 { margin: 0 0 20px; font-size: 26px; }
+  .co-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+  .co-card { background: var(--white); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 22px; }
+  .co-card h2 { font-size: 18px; margin: 0 0 16px; }
+  .co-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+  .co-form .full { grid-column: 1 / -1; }
+  .co-form label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+  .co-form input, .co-form textarea { width: 100%; }
+
+  .co-item { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; }
+  .co-item img { width: 48px; height: 48px; border-radius: 6px; background: #f6f6f6; object-fit: contain; border: 1px solid #eee; }
+  .co-item-name { font-size: 14px; overflow-wrap: anywhere; }
+  .co-item-qty { font-size: 12px; color: var(--muted); }
+  .co-item-price { font-weight: 600; white-space: nowrap; }
+  .co-row { display: flex; justify-content: space-between; margin: 10px 0; }
+  .co-row.green { color: #15803d; }
+  .co-row.total { font-size: 20px; font-weight: 700; border-top: 1px solid #eee; padding-top: 14px; }
+  .co-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: var(--r-md); padding: 10px 14px; margin-bottom: 16px; }
+  .co-edit { font-size: 13px; color: var(--primary-dark); }
+
+  @media (max-width: 900px) {
+    .co-layout { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .co-form { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+
+<div class="co-wrap">
   <h1>Checkout</h1>
 
-  <div class="checkout-grid">
+  <% if (typeof checkoutError !== "undefined" && checkoutError) { %>
+    <div class="co-alert"><%= checkoutError %></div>
+  <% } %>
 
-    <div class="checkout-section">
-      <h3>Shipping Address</h3>
-      <form id="checkoutForm" method="POST" action="/cart/checkout">
-        <label>Full Name</label>
-        <input type="text" name="fullname" value="<%= user.fullname || '' %>" required>
+  <div class="co-layout">
 
-        <label>Email</label>
-        <input type="email" name="email" value="<%= user.email || '' %>" required>
-
-        <label>Phone Number</label>
-        <input type="tel" name="phone" value="<%= user.phone || '' %>" required>
-
-        <label>Address</label>
-        <textarea name="address" rows="3" required><%= user.address || '' %></textarea>
-
-        <label>City</label>
-        <input type="text" name="city" value="<%= user.city || '' %>" required>
-
-        <label>State</label>
-        <input type="text" name="state" value="<%= user.state || '' %>" required>
+    <div class="co-card">
+      <h2>Shipping Details</h2>
+      <form id="checkoutForm" class="co-form" method="POST" action="/cart/checkout">
+        <div class="full">
+          <label>Full Name</label>
+          <input type="text" name="fullname" value="<%= user.fullname || '' %>" required>
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" name="email" value="<%= user.email || '' %>" required>
+        </div>
+        <div>
+          <label>Phone Number</label>
+          <input type="tel" name="phone" value="<%= user.phone || '' %>" required>
+        </div>
+        <div class="full">
+          <label>Address</label>
+          <textarea name="address" rows="3" required><%= user.address || '' %></textarea>
+        </div>
+        <div>
+          <label>City</label>
+          <input type="text" name="city" value="<%= user.city || '' %>" required>
+        </div>
+        <div>
+          <label>State</label>
+          <input type="text" name="state" value="<%= user.state || '' %>" required>
+        </div>
+      </form>
     </div>
 
-    <div class="checkout-section">
-      <h3>Order Summary</h3>
-      <ul class="order-items">
-        <% cart.items.forEach(item => { %>
-          <li>
-            <span><%= item.name %> x <%= item.quantity %></span>
-            <span>₦<%= (item.price * item.quantity).toLocaleString() %></span>
-          </li>
-        <% }) %>
-      </ul>
-      <hr>
-      <h3>Total: ₦<%= cart.totalPrice.toLocaleString() %></h3>
+    <aside class="co-card">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <h2>Order Summary</h2>
+        <a class="co-edit" href="/cart">Edit cart</a>
+      </div>
 
-      <h3>Payment Option</h3>
-      <select name="payment_method" required>
+      <% summary.items.forEach(item => { %>
+        <div class="co-item">
+          <img src="<%= item.image_url %>" alt="">
+          <div>
+            <div class="co-item-name"><%= item.name %></div>
+            <div class="co-item-qty">Qty <%= item.quantity %> × <%= fmt(item.price) %></div>
+          </div>
+          <div class="co-item-price"><%= fmt(item.price * item.quantity) %></div>
+        </div>
+      <% }) %>
+
+      <div class="co-row" style="border-top:1px solid #eee; padding-top:12px;">
+        <span>Subtotal</span><span><%= fmt(summary.subtotal) %></span>
+      </div>
+      <% if (summary.saleSavings > 0) { %>
+        <div class="co-row green"><span>Sale savings (included)</span><span>-<%= fmt(summary.saleSavings) %></span></div>
+      <% } %>
+      <% if (summary.coupon) { %>
+        <div class="co-row green"><span>Coupon (<%= summary.coupon.code %>)</span><span>-<%= fmt(summary.discount) %></span></div>
+      <% } else if (summary.couponError) { %>
+        <div class="co-alert" style="font-size:13px">Coupon not applied: <%= summary.couponError %></div>
+      <% } %>
+      <div class="co-row total"><span>Total</span><span><%= fmt(summary.total) %></span></div>
+
+      <label style="margin-top: var(--s-md); display:block;">Payment Option</label>
+      <select name="payment_method" form="checkoutForm" required style="width:100%">
         <option value="">Select Payment</option>
         <option value="paystack">Paystack</option>
         <option value="paypal">PayPal</option>
         <option value="stripe">Stripe</option>
       </select>
 
-      <button type="submit" class="btn btn-checkout">Place Order</button>
-      </form>
-    </div>
+      <button type="submit" form="checkoutForm" class="btn btn-primary btn-full" style="margin-top: var(--s-md);">
+        Place Order · <%= fmt(summary.total) %>
+      </button>
+    </aside>
+
   </div>
-</div> -->
-
-<div class="container checkout-container">
-
-  <div class="card">
-    <h1>Checkout</h1>
-
-    <div class="checkout-grid" style="display: grid; gap: var(--s-lg); grid-template-columns: 1fr 1fr;">
-
-      <!-- Shipping Details -->
-      <div class="checkout-section card" style="padding: var(--s-md);">
-        <h3>Shipping Address</h3>
-        <form id="checkoutForm" method="POST" action="/cart/checkout" style="display: flex; flex-direction: column; gap: var(--s-sm);">
-          <label>Full Name</label>
-          <input type="text" name="fullname" value="<%= user.fullname || '' %>" required>
-
-          <label>Email</label>
-          <input type="email" name="email" value="<%= user.email || '' %>" required>
-
-          <label>Phone Number</label>
-          <input type="tel" name="phone" value="<%= user.phone || '' %>" required>
-
-          <label>Address</label>
-          <textarea name="address" rows="3" required><%= user.address || '' %></textarea>
-
-          <label>City</label>
-          <input type="text" name="city" value="<%= user.city || '' %>" required>
-
-          <label>State</label>
-          <input type="text" name="state" value="<%= user.state || '' %>" required>
-        </form>
-      </div>
-
-      <!-- Order Summary -->
-      <div class="checkout-section card" style="padding: var(--s-md);">
-        <h3>Order Summary</h3>
-        <ul class="order-items" style="list-style: none; padding: 0; margin-bottom: var(--s-md);">
-          <% cart.items.forEach(item => { %>
-            <li style="display: flex; justify-content: space-between; margin-bottom: var(--s-xs);">
-              <span><%= item.name %> x <%= item.quantity %></span>
-              <span>₦<%= (item.price * item.quantity).toLocaleString() %></span>
-            </li>
-          <% }) %>
-        </ul>
-        <hr style="margin: var(--s-md) 0;">
-        <h3>Total: ₦<%= cart.totalPrice.toLocaleString() %></h3>
-
-        <label style="margin-top: var(--s-md);">Payment Option</label>
-        <select name="payment_method" required>
-          <option value="">Select Payment</option>
-          <option value="paystack">Paystack</option>
-          <option value="paypal">PayPal</option>
-          <option value="stripe">Stripe</option>
-        </select>
-
-        <button type="submit" form="checkoutForm" class="btn btn-primary btn-full" style="margin-top: var(--s-md);">
-          Place Order
-        </button>
-      </div>
-
-    </div>
-  </div>
-
 </div>
-

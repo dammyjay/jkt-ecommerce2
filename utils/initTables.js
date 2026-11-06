@@ -277,6 +277,74 @@ async function initTables() {
   } catch (err) {
     console.error("❌ Error initializing tables:", err);
   }
+
+  // Promotions & discounts (kept separate so a failure above doesn't skip it)
+  try {
+    await pool.query(`
+      ALTER TABLE products
+        ADD COLUMN IF NOT EXISTS sale_price NUMERIC(10,2),
+        ADD COLUMN IF NOT EXISTS sale_starts_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS sale_ends_at TIMESTAMPTZ;
+
+      CREATE TABLE IF NOT EXISTS coupons (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(40) UNIQUE NOT NULL,
+        description TEXT,
+        discount_type VARCHAR(10) NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
+        value NUMERIC(10,2) NOT NULL CHECK (value > 0),
+        min_order NUMERIC(10,2) DEFAULT 0,
+        max_discount NUMERIC(10,2),
+        usage_limit INT,
+        per_user_limit INT,
+        used_count INT DEFAULT 0,
+        starts_at TIMESTAMPTZ,
+        ends_at TIMESTAMPTZ,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS coupon_redemptions (
+        id SERIAL PRIMARY KEY,
+        coupon_id INT REFERENCES coupons(id) ON DELETE CASCADE,
+        order_id INT REFERENCES orders(id) ON DELETE SET NULL,
+        user_id INT REFERENCES users2(id) ON DELETE SET NULL,
+        email VARCHAR(150),
+        discount_amount NUMERIC(10,2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      ALTER TABLE orders
+        ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(10,2),
+        ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(10,2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40),
+        ADD COLUMN IF NOT EXISTS customer_email VARCHAR(150),
+        ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30);
+
+      -- Can a coupon be used on items already discounted by a sale/campaign?
+      ALTER TABLE coupons
+        ADD COLUMN IF NOT EXISTS allow_with_sale BOOLEAN DEFAULT true;
+
+      -- Automatic promo campaigns (no code needed)
+      CREATE TABLE IF NOT EXISTS promo_campaigns (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(150) NOT NULL,
+        description TEXT,
+        banner_url TEXT,
+        discount_type VARCHAR(10) NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
+        value NUMERIC(10,2) NOT NULL CHECK (value > 0),
+        applies_to VARCHAR(12) NOT NULL DEFAULT 'all' CHECK (applies_to IN ('all', 'categories', 'products')),
+        category_ids INT[] DEFAULT '{}',
+        product_ids INT[] DEFAULT '{}',
+        starts_at TIMESTAMPTZ,
+        ends_at TIMESTAMPTZ,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    console.log("✅ Promotion tables ready");
+  } catch (err) {
+    console.error("❌ Error initializing promotion tables:", err);
+  }
 }
 
 module.exports = initTables;

@@ -1,0 +1,10 @@
+<%# Usage: include('../partials/price', { pricing: product.pricing, size: 'sm' | 'lg' }) %>
+<% const _pr = pricing || { price: 0, onSale: false };
+   const _fmt = n => "₦" + Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 }); %>
+<span class="price-tag <%= typeof size !== 'undefined' ? 'price-' + size : '' %>">
+  <span class="price-now"><%= _fmt(_pr.price) %></span>
+  <% if (_pr.onSale) { %>
+    <s class="price-old"><%= _fmt(_pr.original) %></s>
+    <span class="price-off">-<%= _pr.percentOff %>%</span>
+  <% } %>
+</span>

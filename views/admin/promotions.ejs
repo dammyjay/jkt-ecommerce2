@@ -1,0 +1,281 @@
+<%
+  const now = new Date();
+  const catName = Object.fromEntries(categories.map(c => [c.id, c.name]));
+  const statusOf = c => {
+    if (!c.is_active) return ["Disabled", "#6b7280", "#f3f4f6"];
+    if (c.starts_at && new Date(c.starts_at) > now) return ["Scheduled", "#1d4ed8", "#eff6ff"];
+    if (c.ends_at && new Date(c.ends_at) <= now) return ["Ended", "#b91c1c", "#fef2f2"];
+    return ["Live", "#15803d", "#f0fdf4"];
+  };
+  const discount = c => c.discount_type === "percent" ? Number(c.value) + "% off" : "₦" + Number(c.value).toLocaleString("en-NG") + " off";
+  const safeJson = o => JSON.stringify(o).replace(/</g, "\\u003c").replace(/'/g, "\\u0027");
+%>
+
+<style>
+  .pm-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; }
+  .pm-form .full { grid-column: 1 / -1; }
+  .pm-form label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+  .pm-form input, .pm-form select, .pm-form textarea { width: 100%; }
+  .pm-form small { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .pm-box { max-width: 680px !important; }
+  .pm-scope { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .pm-scope label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; margin: 0; font-size: 13px; }
+  .pm-scope input { width: auto; margin: 0; }
+  .pm-scope label:has(input:checked) { background: var(--black); color: #fff; border-color: var(--black); }
+  .pm-picker { border: 1px solid var(--border); border-radius: var(--r-md); max-height: 220px; overflow-y: auto; padding: 6px 10px; }
+  .pm-picker label { display: flex; align-items: center; gap: 8px; font-weight: 400; margin: 4px 0; cursor: pointer; }
+  .pm-picker input[type=checkbox] { width: auto; margin: 0; }
+  .pm-picker .pm-price { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .pm-search { margin-bottom: 6px !important; }
+  .pm-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pm-thumb { width: 72px; height: 40px; border-radius: 6px; object-fit: cover; background: linear-gradient(135deg, var(--primary-dark), var(--black)); display: inline-block; }
+  .pm-status { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .pm-actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .pm-actions form { display: inline; margin: 0; }
+  .pm-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+  .pm-info { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+  .pm-switch { display: flex; align-items: center; gap: 8px; }
+  .pm-switch input { width: auto; margin: 0; }
+  .pm-preview { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; margin-top: 6px; display: none; }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) { .pm-form { grid-template-columns: minmax(0, 1fr); } }
+</style>
+
+<div class="container">
+  <div class="card">
+    <div class="page-header" style="display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+      <h1>📣 Promotions</h1>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn-secondary" href="/promotions" target="_blank">View Hot Deals page ↗</a>
+        <button class="btn btn-primary" onclick="openPromoModal()">➕ New Promotion</button>
+      </div>
+    </div>
+
+    <div class="pm-info">
+      Promotions discount products automatically — no code needed. If a product has several discounts
+      (its own sale price, or more than one promotion), the customer gets the <strong>lowest price</strong>; they never stack.
+      Coupons can still be used on top at checkout.
+    </div>
+
+    <% if (error) { %><div class="pm-alert"><%= error %></div><% } %>
+
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Banner</th>
+            <th>Promotion</th>
+            <th>Discount</th>
+            <th>Applies to</th>
+            <th>Runs</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!campaigns.length) { %>
+            <tr><td colspan="7" style="padding:40px 16px; color:#6b7280;">No promotions yet. Try "Black Friday — 10% off everything".</td></tr>
+          <% } %>
+          <% campaigns.forEach(c => { const [label, color, bg] = statusOf(c); %>
+            <tr>
+              <td><% if (c.banner_url) { %><img class="pm-thumb" src="<%= c.banner_url %>" alt=""><% } else { %><span class="pm-thumb"></span><% } %></td>
+              <td style="text-align:left;">
+                <strong><%= c.title %></strong>
+                <% if (c.description) { %><div style="font-size:12px; color:#6b7280;"><%= c.description %></div><% } %>
+              </td>
+              <td><strong><%= discount(c) %></strong></td>
+              <td style="font-size:13px;">
+                <% if (c.applies_to === "all") { %>
+                  Everything
+                <% } else if (c.applies_to === "categories") { %>
+                  <%= (c.category_ids || []).map(id => catName[id] || "#" + id).join(", ") %>
+                <% } else { %>
+                  Selected products
+                <% } %>
+                <div style="color:#6b7280; font-size:12px;"><%= counts[c.id] %> product<%= counts[c.id] === 1 ? "" : "s" %></div>
+              </td>
+              <td style="font-size:12px;">
+                <div><span class="local-date" data-date="<%= c.starts_at ? new Date(c.starts_at).toISOString() : '' %>">Now</span></div>
+                <div>→ <span class="local-date" data-date="<%= c.ends_at ? new Date(c.ends_at).toISOString() : '' %>">No end</span></div>
+              </td>
+              <td><span class="pm-status" style="color:<%= color %>; background:<%= bg %>;"><%= label %></span></td>
+              <td>
+                <div class="pm-actions">
+                  <button class="icon-btn" title="Edit" onclick='openPromoModal(<%- safeJson(c) %>)'>✏️</button>
+                  <form method="POST" action="/admin/promotions/<%= c.id %>/toggle">
+                    <button class="icon-btn" title="<%= c.is_active ? 'Pause' : 'Resume' %>"><%= c.is_active ? "⏸️" : "▶️" %></button>
+                  </form>
+                  <form method="POST" action="/admin/promotions/<%= c.id %>/delete" onsubmit="return confirm('Delete this promotion?')">
+                    <button class="icon-btn" title="Delete">🗑️</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="promoModal" class="modal">
+  <div class="modal-box pm-box">
+    <span class="close" onclick="closePromoModal()">&times;</span>
+    <h2 id="promoModalTitle">New Promotion</h2>
+
+    <form id="promoForm" class="pm-form" method="POST" action="/admin/promotions/create" enctype="multipart/form-data">
+      <div class="full">
+        <label>Title <small>(shown to customers)</small></label>
+        <input type="text" name="title" id="pTitle" required maxlength="150" placeholder="e.g. Back-to-School Arduino Week">
+      </div>
+      <div class="full">
+        <label>Short description <small>(optional)</small></label>
+        <input type="text" name="description" id="pDescription" placeholder="e.g. 15% off all microcontrollers and sensors">
+      </div>
+      <div>
+        <label>Type</label>
+        <select name="discount_type" id="pType">
+          <option value="percent">Percentage (%)</option>
+          <option value="fixed">Fixed amount off each item (₦)</option>
+        </select>
+      </div>
+      <div>
+        <label>Value</label>
+        <input type="number" step="0.01" min="0.01" name="value" id="pValue" required>
+      </div>
+
+      <div class="full">
+        <label>Applies to</label>
+        <div class="pm-scope">
+          <label><input type="radio" name="applies_to" value="all" checked> Everything</label>
+          <label><input type="radio" name="applies_to" value="categories"> Categories</label>
+          <label><input type="radio" name="applies_to" value="products"> Specific products</label>
+        </div>
+
+        <div id="pickCategories" hidden>
+          <div class="pm-picker">
+            <% categories.forEach(cat => { %>
+              <label><input type="checkbox" name="category_ids" value="<%= cat.id %>"> <%= cat.name %></label>
+            <% }) %>
+          </div>
+        </div>
+
+        <div id="pickProducts" hidden>
+          <input type="text" class="pm-search" id="productSearch" placeholder="Search products…">
+          <div class="pm-picker" id="productList">
+            <% products.forEach(p => { %>
+              <label data-name="<%= p.name.toLowerCase() %>">
+                <input type="checkbox" name="product_ids" value="<%= p.id %>">
+                <span><%= p.name %></span>
+                <span class="pm-price">₦<%= Number(p.price).toLocaleString("en-NG") %></span>
+              </label>
+            <% }) %>
+          </div>
+          <div class="pm-count" id="productCount">0 selected</div>
+        </div>
+      </div>
+
+      <div>
+        <label>Starts <small>(empty = now)</small></label>
+        <input type="datetime-local" data-iso="starts_at" id="pStarts">
+        <input type="hidden" name="starts_at">
+      </div>
+      <div>
+        <label>Ends <small>(empty = no end)</small></label>
+        <input type="datetime-local" data-iso="ends_at" id="pEnds">
+        <input type="hidden" name="ends_at">
+      </div>
+
+      <div class="full">
+        <label>Banner image <small>(optional, wide image works best)</small></label>
+        <input type="file" name="banner" accept="image/*" id="pBanner">
+        <img id="pBannerPreview" class="pm-preview" alt="">
+      </div>
+
+      <div class="full pm-switch">
+        <input type="checkbox" name="is_active" id="pActive" checked>
+        <label for="pActive" style="margin:0">Active</label>
+      </div>
+
+      <div class="full">
+        <button type="submit" class="btn btn-primary btn-full" id="promoSubmit">Create Promotion</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  const modal = document.getElementById("promoModal");
+  const form = document.getElementById("promoForm");
+  const $ = id => document.getElementById(id);
+
+  const toLocalInput = v => {
+    if (!v) return "";
+    const d = new Date(v);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
+
+  document.querySelectorAll(".local-date").forEach(el => {
+    if (el.dataset.date) el.textContent = new Date(el.dataset.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  });
+
+  // Scope pickers
+  const syncScope = () => {
+    const scope = form.querySelector("input[name=applies_to]:checked").value;
+    $("pickCategories").hidden = scope !== "categories";
+    $("pickProducts").hidden = scope !== "products";
+  };
+  form.querySelectorAll("input[name=applies_to]").forEach(r => r.addEventListener("change", syncScope));
+
+  const updateCount = () => {
+    $("productCount").textContent = form.querySelectorAll("input[name=product_ids]:checked").length + " selected";
+  };
+  $("productList").addEventListener("change", updateCount);
+  $("productSearch").addEventListener("input", e => {
+    const q = e.target.value.trim().toLowerCase();
+    $("productList").querySelectorAll("label").forEach(l => { l.hidden = q && !l.dataset.name.includes(q); });
+  });
+
+  $("pBanner").addEventListener("change", e => {
+    const f = e.target.files[0];
+    $("pBannerPreview").style.display = f ? "block" : "none";
+    if (f) $("pBannerPreview").src = URL.createObjectURL(f);
+  });
+
+  window.openPromoModal = (c) => {
+    const editing = !!c;
+    c = c || {};
+    form.reset();
+    form.action = editing ? `/admin/promotions/${c.id}/update` : "/admin/promotions/create";
+    $("promoModalTitle").textContent = editing ? "Edit Promotion" : "New Promotion";
+    $("promoSubmit").textContent = editing ? "Save Changes" : "Create Promotion";
+    $("pTitle").value = c.title || "";
+    $("pDescription").value = c.description || "";
+    $("pType").value = c.discount_type || "percent";
+    $("pValue").value = c.value ? Number(c.value) : "";
+    form.querySelector(`input[name=applies_to][value="${c.applies_to || "all"}"]`).checked = true;
+    form.querySelectorAll("input[name=category_ids]").forEach(cb => { cb.checked = (c.category_ids || []).includes(Number(cb.value)); });
+    form.querySelectorAll("input[name=product_ids]").forEach(cb => { cb.checked = (c.product_ids || []).includes(Number(cb.value)); });
+    $("pStarts").value = toLocalInput(c.starts_at);
+    $("pEnds").value = toLocalInput(c.ends_at);
+    $("pActive").checked = editing ? !!c.is_active : true;
+    $("pBannerPreview").style.display = c.banner_url ? "block" : "none";
+    if (c.banner_url) $("pBannerPreview").src = c.banner_url;
+    $("productSearch").value = "";
+    $("productList").querySelectorAll("label").forEach(l => { l.hidden = false; });
+    syncScope();
+    updateCount();
+    modal.classList.add("active");
+  };
+  window.closePromoModal = () => modal.classList.remove("active");
+  modal.addEventListener("click", e => { if (e.target === modal) closePromoModal(); });
+
+  form.addEventListener("submit", () => {
+    form.querySelectorAll("[data-iso]").forEach(input => {
+      form.querySelector(`input[type=hidden][name="${input.dataset.iso}"]`).value =
+        input.value ? new Date(input.value).toISOString() : "";
+    });
+  });
+})();
+</script>
